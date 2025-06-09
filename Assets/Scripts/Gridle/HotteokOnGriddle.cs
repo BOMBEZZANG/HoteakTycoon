@@ -1,23 +1,26 @@
-// HotteokOnGriddle.cs
+// Assets/Scripts/Gridle/HotteokOnGriddle.cs
+// 개선된 뒤집기 기능이 포함된 호떡 철판 스크립트
+
 using UnityEngine;
-using UnityEngine.UI; // Slider와 Text를 사용하기 위해 추가
-using TMPro; // TextMeshPro를 사용하려면 추가 (없으면 Text 컴포넌트 사용)
+using UnityEngine.UI;
+using System.Collections;
+using TMPro;
 
 public class HotteokOnGriddle : MonoBehaviour
 {
     public enum GriddleState
     {
         Cooking_Unpressed,      // 1. 초기 익는 중
-        ReadyToPress,         // 2. 누르기 대기 (게이지 나타남)
-        Pressing_Holding,     // 2a. (선택적 상태) 현재 누르고 있는 중 (게이지 차오름) - 현재 Update에서 isHoldingForPress로 관리
-        Pressed_Cooking,      // 3. 눌린 후 익는 중
-        ReadyToFlip,          // 4. 뒤집기 대기
-        Flipped_Cooking,      // 5. 뒤집힌 후 익는 중
-        Cooked,               // 6. 완성
-        Burnt                 // 7. 탐
+        ReadyToPress,           // 2. 누르기 대기
+        Pressing_Holding,       // (내부 처리용)
+        Pressed_Cooking,        // 3. 눌린 후 익는 중
+        ReadyToFlip,            // 4. 뒤집기 대기
+        Flipping,               // 4a. 뒤집히는 중 (애니메이션)
+        Flipped_Cooking,        // 5. 뒤집힌 후 익는 중
+        Cooked,                 // 6. 완성
+        Burnt                   // 7. 탐
     }
 
-    // 판정 결과 열거형
     public enum PressQualityResult
     {
         Miss,
@@ -30,145 +33,96 @@ public class HotteokOnGriddle : MonoBehaviour
     public GriddleState currentState = GriddleState.Cooking_Unpressed;
     private PressQualityResult lastPressResult = PressQualityResult.Miss;
 
-    [Header("시간 설정 (Inspector에서 조절)")]
-    public float timeToBecomeReadyToPress = 4.0f;    // 눌리기 대기까지
-    public float timeToBecomeReadyToFlip = 5.0f;     // 눌린 후 뒤집기 대기까지
-    public float timeToBurnIfActionMissed = 5.0f;    // ReadyToPress 또는 ReadyToFlip 상태에서 너무 오래 방치 시 타는 시간
+    [Header("시간 설정")]
+    public float timeToBecomeReadyToPress = 4.0f;
+    public float timeToBecomeReadyToFlip = 5.0f;
+    public float timeToBecomeCooked = 5.0f;
+    public float timeToBurnIfActionMissed = 5.0f;
 
     private float currentTimer = 0.0f;
     private SpriteRenderer spriteRenderer;
 
     [Header("홀드 앤 릴리즈 누르기 설정")]
-    public Slider pressGaugeSlider;            // 누르기 게이지 (Inspector에서 연결)
-    public float maxHoldTimeToFillGauge = 1.5f; // 게이지가 0에서 1까지 차는데 걸리는 시간
-    public float perfectPressMinThreshold = 0.8f; // Perfect 판정 최소값 (게이지 값 기준, 0.0 ~ 1.0)
-    public float perfectPressMaxThreshold = 1.0f; // Perfect 판정 최대값
-    public float goodPressMinThreshold = 0.5f;    // Good 판정 최소값
+    public Slider pressGaugeSlider;
+    public float maxHoldTimeToFillGauge = 1.5f;
+    public float perfectPressMinThreshold = 0.8f;
+    public float perfectPressMaxThreshold = 1.0f;
+    public float goodPressMinThreshold = 0.5f;
     private float currentHoldTime = 0.0f;
     private bool isHoldingForPress = false;
-
-    [Header("판정 영역 표시")]
-    public GameObject perfectZoneIndicator;    // PERFECT 영역 표시 오브젝트
-    public GameObject goodZoneIndicator;       // GOOD 영역 표시 오브젝트
-
-    [Header("판정 결과 UI")]
-    public GameObject resultTextObject;        // 판정 결과 텍스트를 표시할 UI 오브젝트
-    public Text resultText;                   // 일반 Text 컴포넌트 (또는 TextMeshProUGUI를 사용)
-    public float resultTextDisplayTime = 1.5f; // 결과 텍스트 표시 시간
+    
+    [Header("UI 및 효과")]
+    public GameObject perfectZoneIndicator;
+    public GameObject goodZoneIndicator;
+    public GameObject resultTextObject;
+    public Text resultText;
+    public float resultTextDisplayTime = 1.5f;
     private float resultTextTimer = 0f;
 
-    [Header("상태별 스프라이트 (Inspector에서 연결)")]
+    [Header("====== 1단계: 뒤집기 시각적 신호 ======")]
+    public GameObject flipIndicatorIcon;        // 뒤집기 아이콘
+    public GameObject flipArrowIcon;           // 화살표 아이콘 (추가)
+    public float iconBlinkSpeed = 2.0f;        // 깜빡임 속도
+    public Color readyToFlipColor = Color.yellow; // 뒤집기 준비 색상
+    private bool isFlipIndicatorActive = false;
+    private Coroutine flipIndicatorCoroutine;
+
+    [Header("====== 2단계: 탭 입력 설정 ======")]
+    public float tapResponseRadius = 1.5f;     // 탭 감지 반경 확대
+    public AudioClip tapFeedbackSound;         // 탭 피드백 사운드
+    public GameObject tapEffectPrefab;         // 탭 이펙트
+
+    [Header("====== 3단계: 뒤집기 애니메이션 ======")]
+    public float flipAnimationDuration = 0.5f; // 애니메이션 지속시간
+    public AnimationCurve flipCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f); // 애니메이션 커브
+    public Vector3 flipRotationAxis = Vector3.forward; // 회전축
+    public float flipHeight = 0.3f;           // 뒤집을 때 높이
+    
+    [Header("====== 4단계: 후속 타이머 UI ======")]
+    public Slider cookingProgressSlider;       // 요리 진행도 슬라이더
+    public GameObject cookingTimerUI;          // 타이머 UI
+    public TextMeshProUGUI cookingTimeText;    // 남은 시간 텍스트
+    public Color almostDoneColor = new Color(1f, 0.5f, 0f, 1f); // 거의 완성 색상 (주황색)
+
+    [Header("상태별 스프라이트")]
     public Sprite initialUnpressedSprite;
     public Sprite readyToPressSugarSprite;
     public Sprite readyToPressSeedSprite;
     public Sprite pressedSugarSprite;
     public Sprite pressedSeedSprite;
-    public Sprite burntSprite;  // 탄 호떡 스프라이트 추가
+    public Sprite flippedSugarSprite;
+    public Sprite flippedSeedSprite;
+    public Sprite cookedSugarSprite;
+    public Sprite cookedSeedSprite;
+    public Sprite burntSprite;
 
     void Awake()
     {
-        // 맨 첫 줄에 이 로그를 추가해보세요. Awake가 호출되는지 자체를 보기 위함입니다.
-        Debug.Log("--- HotteokOnGriddle Awake() START for " + gameObject.name + " ---");
-
         spriteRenderer = GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) Debug.LogError("HotteokOnGriddle(" + gameObject.name + "): SpriteRenderer가 없습니다!");
+        if (spriteRenderer == null) Debug.LogError("SpriteRenderer가 없습니다!");
 
-        if (pressGaugeSlider != null)
-        {
-            Canvas parentCanvas = pressGaugeSlider.GetComponentInParent<Canvas>();
-            if (parentCanvas != null)
-            {
-                Debug.Log("Hotteok [" + gameObject.name + "/Awake] Found parent canvas: " + parentCanvas.name + ", RenderMode: " + parentCanvas.renderMode + ", Initial WorldCamera: " + parentCanvas.worldCamera?.name);
-
-                if (parentCanvas.renderMode == RenderMode.WorldSpace)
-                {
-                    if (Camera.main != null)
-                    {
-                        parentCanvas.worldCamera = Camera.main;
-                        Debug.Log("Hotteok [" + gameObject.name + "/Awake] Assigned Camera.main (" + Camera.main.name + ") to " + parentCanvas.name + ". New WorldCamera: " + parentCanvas.worldCamera?.name);
-                    }
-                    else
-                    {
-                        Debug.LogError("Hotteok [" + gameObject.name + "/Awake] Camera.main is NULL. Cannot assign Event Camera!");
-                    }
-                }
-            }
-            else
-            {
-                Debug.LogError("Hotteok [" + gameObject.name + "/Awake] Could not find parent Canvas for pressGaugeSlider!");
-            }
-
-            pressGaugeSlider.gameObject.SetActive(false);
-            pressGaugeSlider.minValue = 0;
-            pressGaugeSlider.maxValue = 1;
-        }
-        else
-        {
-            Debug.LogWarning("Hotteok [" + gameObject.name + "/Awake] pressGaugeSlider is NULL in Awake!");
-        }
-
-        // 결과 텍스트 초기화
-        if (resultTextObject != null)
-        {
-            resultTextObject.SetActive(false);
-        }
-
-        Debug.Log("--- HotteokOnGriddle Awake() END for " + gameObject.name + " ---");
+        // UI 초기화
+        if (pressGaugeSlider != null) pressGaugeSlider.gameObject.SetActive(false);
+        if (resultTextObject != null) resultTextObject.SetActive(false);
+        if (flipIndicatorIcon != null) flipIndicatorIcon.SetActive(false);
+        if (flipArrowIcon != null) flipArrowIcon.SetActive(false);
+        if (cookingTimerUI != null) cookingTimerUI.SetActive(false);
+        if (cookingProgressSlider != null) cookingProgressSlider.gameObject.SetActive(false);
     }
-
-    // Initialize method with gauge zone setup
+    
     public void Initialize(PreparationUI.FillingType fillingType, Sprite startingSprite)
     {
         currentFilling = fillingType;
         initialUnpressedSprite = startingSprite;
         if (spriteRenderer != null) spriteRenderer.sprite = initialUnpressedSprite;
         
-        // Set up the pressure gauge slider properly for World Space canvas
-        if (pressGaugeSlider != null)
-        {
-            Canvas canvas = pressGaugeSlider.GetComponentInParent<Canvas>();
-            if (canvas != null && canvas.renderMode == RenderMode.WorldSpace)
-            {
-                // Ensure the canvas has a reference to the camera
-                canvas.worldCamera = Camera.main;
-                
-                // Position the canvas/slider in 3D space - adjust these values as needed
-                RectTransform canvasRect = canvas.GetComponent<RectTransform>();
-                if (canvasRect != null)
-                {
-                    // Make sure the canvas is positioned correctly relative to the hotteok
-                    canvasRect.position = new Vector3(
-                        transform.position.x,
-                        transform.position.y + 0.5f, // Position above the hotteok
-                        transform.position.z - 0.1f  // Slightly in front for visibility
-                    );
-                    
-                    // Scale the canvas appropriately for world space
-                    canvasRect.localScale = new Vector3(0.01f, 0.01f, 0.01f); // Adjust as needed
-                }
-                
-                // Set proper sorting layer for the canvas
-                canvas.sortingLayerName = "UI"; // Make sure this layer exists
-                canvas.sortingOrder = 5; // Adjust as needed
-            }
-        }
-        
-        // 판정 영역 설정
-        SetupUIHierarchy();
-    
-        // 판정 영역 위치 및 크기 설정
         SetupJudgmentZones();
-        // 결과 텍스트 초기화
-        if (resultTextObject != null)
-        {
-            resultTextObject.SetActive(false);
-        }
+        if (resultTextObject != null) resultTextObject.SetActive(false);
         
-        ChangeState(GriddleState.Cooking_Unpressed); // Start the first state and timer
+        ChangeState(GriddleState.Cooking_Unpressed);
         Debug.Log(currentFilling.ToString() + " 속 호떡(" + gameObject.name + ")이 철판에 놓임. 초기 상태: " + currentState);
     }
-
-    // 판정 영역 설정 함수
+    
     private void SetupJudgmentZones()
     {
         if (pressGaugeSlider == null)
@@ -177,7 +131,6 @@ public class HotteokOnGriddle : MonoBehaviour
             return;
         }
 
-        // 슬라이더의 Background RectTransform을 기준으로 삼음
         RectTransform parentRect = pressGaugeSlider.transform.Find("Background")?.GetComponent<RectTransform>();
         if (parentRect == null)
         {
@@ -186,37 +139,32 @@ public class HotteokOnGriddle : MonoBehaviour
         }
 
         float parentWidth = parentRect.rect.width;
-        float parentHeight = parentRect.rect.height; // 판정 영역 높이를 부모(Background)와 동일하게 설정
+        float parentHeight = parentRect.rect.height;
 
-        // GOOD 존 설정
         if (goodZoneIndicator != null)
         {
             RectTransform goodRect = goodZoneIndicator.GetComponent<RectTransform>();
-            Image goodImage = goodZoneIndicator.GetComponent<Image>(); // 색상 및 알파 조절용
+            Image goodImage = goodZoneIndicator.GetComponent<Image>();
 
             if (goodRect != null)
             {
-                // 부모(Background)의 좌측 하단을 (0,0), 우측 상단을 (1,1)로 하는 앵커 설정
                 goodRect.anchorMin = new Vector2(goodPressMinThreshold, 0);
                 goodRect.anchorMax = new Vector2(perfectPressMinThreshold, 1);
-                goodRect.pivot = new Vector2(0.5f, 0.5f); // 중앙 피벗
-
-                // 앵커가 부모의 특정 비율에 맞춰 늘어나므로, offset으로 크기와 위치를 0으로 맞춰줌
-                goodRect.offsetMin = Vector2.zero; // anchoredPosition, sizeDelta 대신 사용
-                goodRect.offsetMax = Vector2.zero; // anchoredPosition, sizeDelta 대신 사용
+                goodRect.pivot = new Vector2(0.5f, 0.5f); 
+                goodRect.offsetMin = Vector2.zero;
+                goodRect.offsetMax = Vector2.zero; 
                 
                 if (goodImage != null)
                 {
                     Color goodColor = goodImage.color;
-                    goodColor.a = 0.9f; // 90% 불투명도
+                    goodColor.a = 0.9f;
                     goodImage.color = goodColor;
                     goodImage.raycastTarget = false;
                 }
-                goodZoneIndicator.SetActive(false); // 초기에는 숨김
+                goodZoneIndicator.SetActive(false);
             }
         }
 
-        // PERFECT 존 설정
         if (perfectZoneIndicator != null)
         {
             RectTransform perfectRect = perfectZoneIndicator.GetComponent<RectTransform>();
@@ -227,7 +175,6 @@ public class HotteokOnGriddle : MonoBehaviour
                 perfectRect.anchorMin = new Vector2(perfectPressMinThreshold, 0);
                 perfectRect.anchorMax = new Vector2(perfectPressMaxThreshold, 1);
                 perfectRect.pivot = new Vector2(0.5f, 0.5f);
-
                 perfectRect.offsetMin = Vector2.zero;
                 perfectRect.offsetMax = Vector2.zero;
 
@@ -241,9 +188,8 @@ public class HotteokOnGriddle : MonoBehaviour
                 perfectZoneIndicator.SetActive(false);
             }
         }
-        Debug.Log("판정 영역 UI 설정 적용됨: GOOD(" + goodPressMinThreshold + "~" + perfectPressMinThreshold + "), PERFECT(" + perfectPressMinThreshold + "~" + perfectPressMaxThreshold + ")");
     }
-    
+
     void Update()
     {
         currentTimer += Time.deltaTime;
@@ -263,25 +209,24 @@ public class HotteokOnGriddle : MonoBehaviour
                     currentHoldTime += Time.deltaTime;
                     if (pressGaugeSlider != null)
                     {
-                        pressGaugeSlider.value = Mathf.Clamp01(currentHoldTime / maxHoldTimeToFillGauge);
+                        float newValue = Mathf.Clamp01(currentHoldTime / maxHoldTimeToFillGauge);
+                        pressGaugeSlider.value = newValue;
+                        
+                        // 게이지 업데이트 디버깅 (첫 몇 번만)
+                        if (Time.frameCount % 30 == 0) // 30프레임마다 로그
+                        {
+                            Debug.Log("게이지 업데이트: " + newValue + ", 슬라이더 활성상태: " + pressGaugeSlider.gameObject.activeInHierarchy);
+                        }
                     }
-
                     if (currentHoldTime >= maxHoldTimeToFillGauge)
                     {
                         PerformPressAction();
                     }
                 }
-                else
+                else if (currentTimer >= timeToBurnIfActionMissed)
                 {
-                    if (currentTimer >= timeToBurnIfActionMissed)
-                    {
-                        Debug.Log("ReadyToPress 상태에서 너무 오래 방치되어 타버렸습니다!");
-                        ChangeState(GriddleState.Burnt);
-                    }
+                    ChangeState(GriddleState.Burnt);
                 }
-                
-                // 게이지 위치 업데이트 (필요한 경우)
-                UpdateGaugePosition();
                 break;
 
             case GriddleState.Pressed_Cooking:
@@ -291,12 +236,31 @@ public class HotteokOnGriddle : MonoBehaviour
                 }
                 break;
 
+            case GriddleState.ReadyToFlip:
+                if (currentTimer >= timeToBurnIfActionMissed)
+                {
+                    ChangeState(GriddleState.Burnt);
+                }
+                break;
+
+            case GriddleState.Flipped_Cooking:
+                // 4단계: 후속 타이머 UI 업데이트
+                UpdateCookingTimer();
+                if (currentTimer >= timeToBecomeCooked)
+                {
+                    ChangeState(GriddleState.Cooked);
+                }
+                break;
+
+            case GriddleState.Cooked:
+                break;
+
+            case GriddleState.Flipping:
             case GriddleState.Burnt:
-                enabled = false;
                 break;
         }
 
-        // 결과 텍스트 표시 타이머 관리
+        // 결과 텍스트 타이머 업데이트
         if (resultTextObject != null && resultTextObject.activeInHierarchy)
         {
             resultTextTimer += Time.deltaTime;
@@ -308,62 +272,144 @@ public class HotteokOnGriddle : MonoBehaviour
         }
     }
 
-    // 게이지 위치 업데이트 함수
-    private void UpdateGaugePosition()
+    // ====== 4단계: 후속 타이머 UI 업데이트 ======
+    private void UpdateCookingTimer()
     {
-        if (pressGaugeSlider != null && pressGaugeSlider.gameObject.activeInHierarchy)
+        if (cookingProgressSlider != null)
         {
-            Canvas canvas = pressGaugeSlider.GetComponentInParent<Canvas>();
-            if (canvas != null && canvas.renderMode == RenderMode.WorldSpace)
+            float progress = currentTimer / timeToBecomeCooked;
+            cookingProgressSlider.value = progress;
+
+            // 거의 완성되면 색상 변경
+            if (progress > 0.8f)
             {
-                RectTransform canvasRect = canvas.GetComponent<RectTransform>();
-                if (canvasRect != null)
+                Image fillImage = cookingProgressSlider.fillRect.GetComponent<Image>();
+                if (fillImage != null)
                 {
-                    canvasRect.position = new Vector3(
-                        transform.position.x,
-                        transform.position.y + 0.5f,  // 호떡 위에 위치
-                        transform.position.z - 0.1f   // 앞쪽에 위치 (보이도록)
-                    );
+                    fillImage.color = Color.Lerp(Color.green, almostDoneColor, (progress - 0.8f) / 0.2f);
                 }
             }
         }
+
+        if (cookingTimeText != null)
+        {
+            float remainingTime = timeToBecomeCooked - currentTimer;
+            cookingTimeText.text = Mathf.Ceil(remainingTime).ToString() + "s";
+        }
     }
     
-    private void SetupUIHierarchy()
+    void OnMouseDown()
     {
-        if (pressGaugeSlider == null) return;
-        
-        // 슬라이더의 배경 Transform 찾기
-        Transform sliderBackground = pressGaugeSlider.transform.Find("Background");
-        if (sliderBackground == null) return;
-        
-        // PerfectZone과 GoodZone의 부모를 Background로 설정
-        if (perfectZoneIndicator != null)
+        if (currentState == GriddleState.ReadyToPress && !isHoldingForPress)
         {
-            perfectZoneIndicator.transform.SetParent(sliderBackground, false);
+            isHoldingForPress = true;
+            currentHoldTime = 0f;
+            Debug.Log("호떡(" + gameObject.name + ") 누르기 시작!");
+            
+            // UI 상태 재확인
+            if (pressGaugeSlider != null)
+            {
+                Debug.Log("누르기 시작 시 슬라이더 상태: 활성=" + pressGaugeSlider.gameObject.activeInHierarchy + 
+                         ", 값=" + pressGaugeSlider.value + ", 위치=" + pressGaugeSlider.transform.position);
+            }
         }
-        
-        if (goodZoneIndicator != null)
+        else if (currentState == GriddleState.ReadyToFlip)
         {
-            goodZoneIndicator.transform.SetParent(sliderBackground, false);
+            // 2단계: 탭 피드백 효과 (선택사항)
+            Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            ShowTapFeedback(mousePosition);
+            
+            StartCoroutine(ImprovedFlipHotteok());
         }
-        
-        Debug.Log("판정 영역 UI 계층 구조 설정 완료");
     }
 
+    // 2단계: 탭 피드백 효과
+    private void ShowTapFeedback(Vector3 position)
+    {
+        if (tapEffectPrefab != null)
+        {
+            GameObject effect = Instantiate(tapEffectPrefab, position, Quaternion.identity);
+            Destroy(effect, 1f);
+        }
+
+        if (tapFeedbackSound != null)
+        {
+            AudioSource.PlayClipAtPoint(tapFeedbackSound, position);
+        }
+    }
+
+    void OnMouseUp()
+    {
+        if (currentState == GriddleState.ReadyToPress && isHoldingForPress)
+        {
+            PerformPressAction();
+        }
+    }
+
+    // ====== 3단계: 개선된 뒤집기 애니메이션 ======
+    IEnumerator ImprovedFlipHotteok()
+    {
+        ChangeState(GriddleState.Flipping);
+
+        Vector3 startPosition = transform.position;
+        Vector3 startRotation = transform.eulerAngles;
+        Vector3 endRotation = startRotation + new Vector3(0, 180, 0);
+        
+        bool spriteChanged = false;
+        float elapsedTime = 0f;
+
+        while (elapsedTime < flipAnimationDuration)
+        {
+            elapsedTime += Time.deltaTime;
+            float normalizedTime = elapsedTime / flipAnimationDuration;
+            float curveValue = flipCurve.Evaluate(normalizedTime);
+
+            // 회전 애니메이션
+            Vector3 currentRotation = Vector3.Lerp(startRotation, endRotation, curveValue);
+            transform.eulerAngles = currentRotation;
+
+            // 높이 애니메이션 (포물선)
+            float heightOffset = Mathf.Sin(normalizedTime * Mathf.PI) * flipHeight;
+            transform.position = startPosition + Vector3.up * heightOffset;
+
+            // 중간 지점에서 스프라이트 변경
+            if (normalizedTime >= 0.5f && !spriteChanged)
+            {
+                spriteChanged = true;
+                if (currentFilling == PreparationUI.FillingType.Sugar)
+                    spriteRenderer.sprite = flippedSugarSprite;
+                else if (currentFilling == PreparationUI.FillingType.Seed)
+                    spriteRenderer.sprite = flippedSeedSprite;
+            }
+
+            yield return null;
+        }
+
+        // 최종 위치 및 회전 설정
+        transform.position = startPosition;
+        transform.eulerAngles = endRotation;
+
+        ChangeState(GriddleState.Flipped_Cooking);
+    }
+    
     public void ChangeState(GriddleState newState)
     {
         GriddleState oldState = currentState;
         currentState = newState;
         currentTimer = 0f;
 
-        Debug.Log("호떡 (" + gameObject.name + ", " + currentFilling.ToString() + ") 상태 변경: " + oldState + " -> " + newState);
-
+        // 이전 상태 정리
         if (oldState == GriddleState.ReadyToPress || oldState == GriddleState.Pressing_Holding)
         {
             if (pressGaugeSlider != null) pressGaugeSlider.gameObject.SetActive(false);
             isHoldingForPress = false;
         }
+        if (oldState == GriddleState.ReadyToFlip)
+        {
+            StopFlipIndicator(); // 1단계: 뒤집기 표시 중지
+        }
+
+        Debug.Log("호떡 상태 변경: " + oldState + " -> " + newState);
 
         switch (newState)
         {
@@ -382,58 +428,244 @@ public class HotteokOnGriddle : MonoBehaviour
                 }
 
                 currentHoldTime = 0f;
+                
+                // UI 디버깅 로그 추가
+                Debug.Log("=== 누르기 UI 활성화 시도 ===");
                 if (pressGaugeSlider != null)
                 {
                     pressGaugeSlider.value = 0;
-                    pressGaugeSlider.gameObject.SetActive(true); // 게이지 보이기
-                    Debug.Log("Hotteok [" + gameObject.name + "] GaugeSlider.gameObject.SetActive(true) 호출됨.");
-
-                    // 판정 영역도 표시
-                    if (perfectZoneIndicator != null) perfectZoneIndicator.SetActive(true);
-                    if (goodZoneIndicator != null) goodZoneIndicator.SetActive(true);
+                    pressGaugeSlider.gameObject.SetActive(true);
+                    
+                    // 더 자세한 UI 상태 디버깅
+                    Debug.Log("pressGaugeSlider 활성화됨. 위치: " + pressGaugeSlider.transform.position);
+                    
+                    Canvas canvas = pressGaugeSlider.GetComponentInParent<Canvas>();
+                    Debug.Log("pressGaugeSlider Canvas: " + (canvas != null ? canvas.name + " (" + canvas.renderMode + ")" : "NULL"));
+                    Debug.Log("pressGaugeSlider 활성 상태: " + pressGaugeSlider.gameObject.activeInHierarchy);
+                    Debug.Log("pressGaugeSlider Scale: " + pressGaugeSlider.transform.localScale);
+                    
+                    // 부모 오브젝트들 확인
+                    Transform parent = pressGaugeSlider.transform.parent;
+                    while (parent != null)
+                    {
+                        Debug.Log("부모: " + parent.name + " 활성상태: " + parent.gameObject.activeInHierarchy);
+                        parent = parent.parent;
+                    }
+                    
+                    // RectTransform 정보
+                    RectTransform rectTrans = pressGaugeSlider.GetComponent<RectTransform>();
+                    if (rectTrans != null)
+                    {
+                        Debug.Log("RectTransform - anchoredPosition: " + rectTrans.anchoredPosition + 
+                                 ", sizeDelta: " + rectTrans.sizeDelta + 
+                                 ", anchorMin: " + rectTrans.anchorMin + 
+                                 ", anchorMax: " + rectTrans.anchorMax);
+                    }
+                    
+                    // 강제로 호떡 위에 위치시키기 (WorldSpace Canvas 지원)
+                    if (canvas != null)
+                    {
+                        if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                        {
+                            Debug.Log(">>> 테스트: Screen Space UI를 화면 중앙으로 이동");
+                            Vector3 hotteokScreenPos = Camera.main.WorldToScreenPoint(transform.position);
+                            pressGaugeSlider.transform.position = new Vector3(hotteokScreenPos.x, hotteokScreenPos.y + 20, 0);
+                        }
+                        else if (canvas.renderMode == RenderMode.WorldSpace)
+                        {
+                            Debug.Log(">>> 테스트: WorldSpace UI를 호떡 위로 이동");
+                            // WorldSpace Canvas의 경우 월드 좌표로 위치 설정
+                            Vector3 hotteokWorldPos = transform.position + Vector3.up * 2.0f; // 호떡 위 2유닛
+                            pressGaugeSlider.transform.position = hotteokWorldPos;
+                            
+                            // 카메라를 향하도록 회전 설정
+                            if (Camera.main != null)
+                            {
+                                pressGaugeSlider.transform.LookAt(Camera.main.transform);
+                                pressGaugeSlider.transform.Rotate(0, 180, 0); // 뒤집힌 상태 보정
+                            }
+                            
+                            // 크기 조정 (WorldSpace에서는 작게 보일 수 있음)
+                            pressGaugeSlider.transform.localScale = Vector3.one * 0.01f; // 크기 조정
+                        }
+                        Debug.Log("새로운 위치: " + pressGaugeSlider.transform.position);
+                    }
+                    
+                    if (perfectZoneIndicator != null) 
+                    {
+                        perfectZoneIndicator.SetActive(true);
+                        Debug.Log("perfectZoneIndicator 활성화됨");
+                    }
+                    if (goodZoneIndicator != null) 
+                    {
+                        goodZoneIndicator.SetActive(true);
+                        Debug.Log("goodZoneIndicator 활성화됨");
+                    }
                 }
                 else
                 {
-                    Debug.LogError("CRITICAL: Hotteok [" + gameObject.name + "] pressGaugeSlider is NULL when trying to activate it in ReadyToPress state!");
+                    Debug.LogError("pressGaugeSlider가 NULL입니다! Inspector에서 연결을 확인하세요.");
                 }
                 break;
-
+            
             case GriddleState.Pressed_Cooking:
-                // PerformPressAction에서 스프라이트 변경
                 break;
 
             case GriddleState.ReadyToFlip:
-                Debug.Log("이제 뒤집을 시간입니다! (다음 단계에서 구현)");
+                StartFlipIndicator(); // 1단계: 뒤집기 표시 시작
+                break;
+
+            case GriddleState.Flipping:
+                break;
+
+            case GriddleState.Flipped_Cooking:
+                StartCookingTimer(); // 4단계: 후속 타이머 시작
+                break;
+
+            case GriddleState.Cooked:
+                CompleteCooking(); // 완성 처리
                 break;
 
             case GriddleState.Burnt:
-                Debug.Log("타버렸습니다... ㅠㅠ");
-                if (pressGaugeSlider != null) pressGaugeSlider.gameObject.SetActive(false);
-                // 탄 스프라이트로 변경
-                if (spriteRenderer != null && burntSprite != null)
-                {
-                    spriteRenderer.sprite = burntSprite;
-                }
+                HandleBurnt(); // 탄 상태 처리
                 break;
         }
     }
 
-    void OnMouseDown()
+    // ====== 1단계: 뒤집기 시각적 신호 시작 ======
+    private void StartFlipIndicator()
     {
-        if (currentState == GriddleState.ReadyToPress && !isHoldingForPress)
+        isFlipIndicatorActive = true;
+        
+        if (flipIndicatorIcon != null)
         {
-            isHoldingForPress = true;
-            currentHoldTime = 0f;
-            Debug.Log("호떡(" + gameObject.name + ") 누르기 시작! 홀드 중...");
+            flipIndicatorIcon.SetActive(true);
+        }
+        
+        if (flipArrowIcon != null)
+        {
+            flipArrowIcon.SetActive(true);
+        }
+
+        // 깜빡임 효과 시작
+        if (flipIndicatorCoroutine != null)
+            StopCoroutine(flipIndicatorCoroutine);
+        flipIndicatorCoroutine = StartCoroutine(FlipIndicatorBlink());
+
+        // 호떡 색상 변경으로 준비 상태 표시
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = Color.Lerp(Color.white, readyToFlipColor, 0.3f);
+        }
+
+        Debug.Log("뒤집기 준비 완료! 탭하여 뒤집으세요!");
+    }
+
+    // 1단계: 깜빡임 효과 코루틴
+    private IEnumerator FlipIndicatorBlink()
+    {
+        while (isFlipIndicatorActive)
+        {
+            // 아이콘 깜빡임
+            if (flipIndicatorIcon != null)
+            {
+                flipIndicatorIcon.SetActive(!flipIndicatorIcon.activeInHierarchy);
+            }
+            
+            // 화살표 회전 애니메이션
+            if (flipArrowIcon != null)
+            {
+                flipArrowIcon.transform.Rotate(0, 0, 180 * Time.deltaTime * iconBlinkSpeed);
+            }
+
+            yield return new WaitForSeconds(1f / iconBlinkSpeed);
         }
     }
 
-    void OnMouseUp()
+    // 1단계: 뒤집기 표시 중지
+    private void StopFlipIndicator()
     {
-        if (currentState == GriddleState.ReadyToPress && isHoldingForPress)
+        isFlipIndicatorActive = false;
+        
+        if (flipIndicatorCoroutine != null)
         {
-            PerformPressAction();
+            StopCoroutine(flipIndicatorCoroutine);
+            flipIndicatorCoroutine = null;
         }
+
+        if (flipIndicatorIcon != null) flipIndicatorIcon.SetActive(false);
+        if (flipArrowIcon != null) flipArrowIcon.SetActive(false);
+
+        // 색상 원복
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = Color.white;
+        }
+    }
+
+    // ====== 4단계: 후속 타이머 시작 ======
+    private void StartCookingTimer()
+    {
+        if (cookingTimerUI != null)
+        {
+            cookingTimerUI.SetActive(true);
+        }
+
+        if (cookingProgressSlider != null)
+        {
+            cookingProgressSlider.gameObject.SetActive(true);
+            cookingProgressSlider.value = 0f;
+            
+            // 초기 색상 설정
+            Image fillImage = cookingProgressSlider.fillRect.GetComponent<Image>();
+            if (fillImage != null)
+            {
+                fillImage.color = Color.green;
+            }
+        }
+
+        Debug.Log("뒤집기 완료! 이제 " + timeToBecomeCooked + "초 후에 완성됩니다.");
+    }
+
+    private void CompleteCooking()
+    {
+        Debug.Log("호떡 완성!");
+        
+        // 타이머 UI 숨기기
+        if (cookingTimerUI != null) cookingTimerUI.SetActive(false);
+        if (cookingProgressSlider != null) cookingProgressSlider.gameObject.SetActive(false);
+
+        // 완성 스프라이트 설정
+        if (currentFilling == PreparationUI.FillingType.Sugar)
+            spriteRenderer.sprite = cookedSugarSprite;
+        else if (currentFilling == PreparationUI.FillingType.Seed)
+            spriteRenderer.sprite = cookedSeedSprite;
+
+        // 완성 효과 (선택사항)
+        ShowCompletionEffect();
+    }
+
+    private void HandleBurnt()
+    {
+        Debug.Log("타버렸습니다... ㅠㅠ");
+        
+        // 모든 UI 숨기기
+        if (pressGaugeSlider != null) pressGaugeSlider.gameObject.SetActive(false);
+        if (cookingTimerUI != null) cookingTimerUI.SetActive(false);
+        if (cookingProgressSlider != null) cookingProgressSlider.gameObject.SetActive(false);
+        StopFlipIndicator();
+
+        // 탄 스프라이트 설정
+        if (spriteRenderer != null && burntSprite != null)
+        {
+            spriteRenderer.sprite = burntSprite;
+        }
+    }
+
+    private void ShowCompletionEffect()
+    {
+        // 완성 효과 구현 (파티클, 사운드 등)
+        Debug.Log("🎉 호떡 완성 축하 효과!");
     }
 
     void PerformPressAction()
@@ -443,35 +675,27 @@ public class HotteokOnGriddle : MonoBehaviour
         float pressQuality = (pressGaugeSlider != null) ? pressGaugeSlider.value : currentHoldTime / maxHoldTimeToFillGauge;
         pressQuality = Mathf.Clamp01(pressQuality);
 
-        // 판정 결과 결정 (수정된 로직)
         PressQualityResult pressResult = PressQualityResult.Miss;
         string resultString = "Miss";
         Color resultColor = Color.red;
         
-        // 판정 로직 수정: perfectPressMinThreshold와 perfectPressMaxThreshold 사이의 값에 대해서만 Perfect 판정
         if (pressQuality >= perfectPressMinThreshold && pressQuality <= perfectPressMaxThreshold)
         {
             pressResult = PressQualityResult.Perfect;
             resultString = "PERFECT!";
-            resultColor = new Color(1f, 0.8f, 0f); // 금색
+            resultColor = new Color(1f, 0.8f, 0f);
         }
-        // 명확하게 goodPressMinThreshold 이상이고 perfectPressMinThreshold 미만일 때만 Good 판정
-        else if (pressQuality >= goodPressMinThreshold && pressQuality < perfectPressMinThreshold)
+        else if (pressQuality >= goodPressMinThreshold)
         {
             pressResult = PressQualityResult.Good;
             resultString = "GOOD!";
-            resultColor = new Color(0f, 0.8f, 0.2f); // 녹색
+            resultColor = new Color(0f, 0.8f, 0.2f);
         }
-        // 그 외 경우는 Miss (이미 설정됨)
         
-        // 결과 저장 및 디버그 로그
         lastPressResult = pressResult;
         Debug.Log("호떡(" + gameObject.name + ") 누르기 결과: " + resultString + " (게이지: " + pressQuality.ToString("F2") + ")");
         
-        // 결과 텍스트 표시
         ShowPressResult(resultString, resultColor);
-        
-        // 판정 결과에 따른 추가 효과 적용
         ApplyPressResultEffects(pressResult);
 
         if (spriteRenderer != null)
@@ -485,7 +709,6 @@ public class HotteokOnGriddle : MonoBehaviour
         ChangeState(GriddleState.Pressed_Cooking);
     }
 
-    // 결과 텍스트 표시 함수
     private void ShowPressResult(string result, Color color)
     {
         if (resultTextObject != null && resultText != null)
@@ -495,7 +718,6 @@ public class HotteokOnGriddle : MonoBehaviour
             resultTextObject.SetActive(true);
             resultTextTimer = 0f;
             
-            // 결과 텍스트 위치 조정 (호떡 위에 표시)
             RectTransform resultRect = resultTextObject.GetComponent<RectTransform>();
             if (resultRect != null)
             {
@@ -504,13 +726,12 @@ public class HotteokOnGriddle : MonoBehaviour
                 {
                     resultRect.position = new Vector3(
                         transform.position.x,
-                        transform.position.y + 0.7f,  // 호떡 위에 표시
-                        transform.position.z - 0.1f   // 앞쪽에 표시
+                        transform.position.y + 0.7f,
+                        transform.position.z - 0.1f
                     );
                 }
             }
             
-            // 결과 텍스트에 애니메이션 효과 추가 (선택사항)
             Animation anim = resultTextObject.GetComponent<Animation>();
             if (anim != null)
             {
@@ -520,7 +741,6 @@ public class HotteokOnGriddle : MonoBehaviour
         }
     }
 
-    // 판정 결과에 따른 효과 적용 함수
     private void ApplyPressResultEffects(PressQualityResult result)
     {
         float originalTime = timeToBecomeReadyToFlip;
@@ -528,37 +748,18 @@ public class HotteokOnGriddle : MonoBehaviour
         switch (result)
         {
             case PressQualityResult.Perfect:
-                // PERFECT 판정 효과: 30% 시간 단축
                 timeToBecomeReadyToFlip *= 0.7f;
                 Debug.Log("PERFECT! 뒤집기까지 시간 30% 단축! (" + originalTime + "초 -> " + timeToBecomeReadyToFlip + "초)");
                 break;
                 
             case PressQualityResult.Good:
-                // GOOD 판정 효과: 15% 시간 단축
                 timeToBecomeReadyToFlip *= 0.85f;
                 Debug.Log("GOOD! 뒤집기까지 시간 15% 단축! (" + originalTime + "초 -> " + timeToBecomeReadyToFlip + "초)");
                 break;
                 
             case PressQualityResult.Miss:
-                // MISS 판정 효과: 추가 효과 없음
                 Debug.Log("MISS! 기본 쿠킹 시간 유지: " + timeToBecomeReadyToFlip + "초");
                 break;
         }
-        
-        // GameManager에 점수 추가 (GameManager가 있다면)
-        /*
-        GameManager gameManager = FindObjectOfType<GameManager>();
-        if (gameManager != null)
-        {
-            int scoreToAdd = 0;
-            switch (result)
-            {
-                case PressQualityResult.Perfect: scoreToAdd = 100; break;
-                case PressQualityResult.Good: scoreToAdd = 50; break;
-                case PressQualityResult.Miss: scoreToAdd = 10; break;
-            }
-            gameManager.AddScore(scoreToAdd);
-        }
-        */
     }
 }

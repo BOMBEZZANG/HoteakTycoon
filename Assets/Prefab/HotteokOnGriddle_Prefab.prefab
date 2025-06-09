@@ -313,7 +313,7 @@ RectTransform:
   m_GameObject: {fileID: 5128710866469858514}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.25, y: 0.35, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8709232305805694670}
@@ -323,7 +323,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -182}
+  m_AnchoredPosition: {x: 0, y: -400}
   m_SizeDelta: {x: 160, y: 20}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &823414067514969784
@@ -478,9 +478,9 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6469093889347207730}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
+  m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3351775305090657931}
@@ -488,9 +488,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 88.78238, y: 150}
-  m_SizeDelta: {x: 181, y: 321}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0, y: 0}
 --- !u!223 &8756296511874064664
 Canvas:
   m_ObjectHideFlags: 0
@@ -500,7 +500,7 @@ Canvas:
   m_GameObject: {fileID: 6469093889347207730}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 2
+  m_RenderMode: 0
   m_Camera: {fileID: 0}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
@@ -924,6 +924,7 @@ MonoBehaviour:
   currentState: 0
   timeToBecomeReadyToPress: 4
   timeToBecomeReadyToFlip: 5
+  timeToBecomeCooked: 5
   timeToBurnIfActionMissed: 5
   pressGaugeSlider: {fileID: 823414067514969784}
   maxHoldTimeToFillGauge: 1.5
@@ -935,12 +936,54 @@ MonoBehaviour:
   resultTextObject: {fileID: 0}
   resultText: {fileID: 0}
   resultTextDisplayTime: 1.5
+  flipIndicatorIcon: {fileID: 0}
+  flipArrowIcon: {fileID: 0}
+  iconBlinkSpeed: 2
+  readyToFlipColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  tapResponseRadius: 1.5
+  tapFeedbackSound: {fileID: 0}
+  tapEffectPrefab: {fileID: 0}
+  flipAnimationDuration: 0.5
+  flipCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  flipRotationAxis: {x: 0, y: 0, z: 1}
+  flipHeight: 0.3
+  cookingProgressSlider: {fileID: 0}
+  cookingTimerUI: {fileID: 0}
+  cookingTimeText: {fileID: 0}
+  almostDoneColor: {r: 1, g: 0.5, b: 0, a: 1}
   initialUnpressedSprite: {fileID: 0}
   readyToPressSugarSprite: {fileID: -7167818681738910510, guid: 47e9c531185ef3942883488de2985d5b, type: 3}
   readyToPressSeedSprite: {fileID: -2136349348937498198, guid: 66f801c64623edf499fc964dd34a083a, type: 3}
-  pressedSugarSprite: {fileID: 1735634815290594531, guid: d21b026ed56e05f459d5a9d4b8242214, type: 3}
-  pressedSeedSprite: {fileID: 1735634815290594531, guid: d21b026ed56e05f459d5a9d4b8242214, type: 3}
-  burntSprite: {fileID: 0}
+  pressedSugarSprite: {fileID: 8693723918302632138, guid: ede4626bc182b08469d2d8cab4476c39, type: 3}
+  pressedSeedSprite: {fileID: -4356015486030424005, guid: c1c65f1756adb0c44adea10b19b8f13a, type: 3}
+  flippedSugarSprite: {fileID: 3755606153230528415, guid: 2f61f161beae5c8418ef726b15bd22a5, type: 3}
+  flippedSeedSprite: {fileID: 7560782464706946789, guid: 47b3eae278d5e6d43a21a45563962021, type: 3}
+  cookedSugarSprite: {fileID: -7947874647871885614, guid: 51436dee8c5dad7408126680d1f6c0e7, type: 3}
+  cookedSeedSprite: {fileID: 3610103580277048171, guid: 5930176519341c940a4ee742081e2de5, type: 3}
+  burntSprite: {fileID: -4749823285884285777, guid: 2523999ea0e969046af44b4fd71982e7, type: 3}
 --- !u!61 &2615660671197094005
 BoxCollider2D:
   m_ObjectHideFlags: 0
