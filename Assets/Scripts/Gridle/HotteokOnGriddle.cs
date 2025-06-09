@@ -154,10 +154,10 @@ public class HotteokOnGriddle : MonoBehaviour
         }
         
         // 판정 영역 설정
-    SetupUIHierarchy();
+        SetupUIHierarchy();
     
-    // 판정 영역 위치 및 크기 설정
-    SetupJudgmentZones();
+        // 판정 영역 위치 및 크기 설정
+        SetupJudgmentZones();
         // 결과 텍스트 초기화
         if (resultTextObject != null)
         {
@@ -169,7 +169,7 @@ public class HotteokOnGriddle : MonoBehaviour
     }
 
     // 판정 영역 설정 함수
-  private void SetupJudgmentZones()
+    private void SetupJudgmentZones()
     {
         if (pressGaugeSlider == null)
         {
@@ -208,7 +208,7 @@ public class HotteokOnGriddle : MonoBehaviour
                 if (goodImage != null)
                 {
                     Color goodColor = goodImage.color;
-                    goodColor.a = 0.9f; // 30% 불투명도
+                    goodColor.a = 0.9f; // 90% 불투명도
                     goodImage.color = goodColor;
                     goodImage.raycastTarget = false;
                 }
@@ -243,7 +243,8 @@ public class HotteokOnGriddle : MonoBehaviour
         }
         Debug.Log("판정 영역 UI 설정 적용됨: GOOD(" + goodPressMinThreshold + "~" + perfectPressMinThreshold + "), PERFECT(" + perfectPressMinThreshold + "~" + perfectPressMaxThreshold + ")");
     }
-   void Update()
+    
+    void Update()
     {
         currentTimer += Time.deltaTime;
 
@@ -329,26 +330,26 @@ public class HotteokOnGriddle : MonoBehaviour
     }
     
     private void SetupUIHierarchy()
-{
-    if (pressGaugeSlider == null) return;
-    
-    // 슬라이더의 배경 Transform 찾기
-    Transform sliderBackground = pressGaugeSlider.transform.Find("Background");
-    if (sliderBackground == null) return;
-    
-    // PerfectZone과 GoodZone의 부모를 Background로 설정
-    if (perfectZoneIndicator != null)
     {
-        perfectZoneIndicator.transform.SetParent(sliderBackground, false);
+        if (pressGaugeSlider == null) return;
+        
+        // 슬라이더의 배경 Transform 찾기
+        Transform sliderBackground = pressGaugeSlider.transform.Find("Background");
+        if (sliderBackground == null) return;
+        
+        // PerfectZone과 GoodZone의 부모를 Background로 설정
+        if (perfectZoneIndicator != null)
+        {
+            perfectZoneIndicator.transform.SetParent(sliderBackground, false);
+        }
+        
+        if (goodZoneIndicator != null)
+        {
+            goodZoneIndicator.transform.SetParent(sliderBackground, false);
+        }
+        
+        Debug.Log("판정 영역 UI 계층 구조 설정 완료");
     }
-    
-    if (goodZoneIndicator != null)
-    {
-        goodZoneIndicator.transform.SetParent(sliderBackground, false);
-    }
-    
-    Debug.Log("판정 영역 UI 계층 구조 설정 완료");
-}
 
     public void ChangeState(GriddleState newState)
     {
@@ -442,23 +443,26 @@ public class HotteokOnGriddle : MonoBehaviour
         float pressQuality = (pressGaugeSlider != null) ? pressGaugeSlider.value : currentHoldTime / maxHoldTimeToFillGauge;
         pressQuality = Mathf.Clamp01(pressQuality);
 
-        // 판정 결과 결정
+        // 판정 결과 결정 (수정된 로직)
         PressQualityResult pressResult = PressQualityResult.Miss;
         string resultString = "Miss";
         Color resultColor = Color.red;
         
+        // 판정 로직 수정: perfectPressMinThreshold와 perfectPressMaxThreshold 사이의 값에 대해서만 Perfect 판정
         if (pressQuality >= perfectPressMinThreshold && pressQuality <= perfectPressMaxThreshold)
         {
             pressResult = PressQualityResult.Perfect;
             resultString = "PERFECT!";
             resultColor = new Color(1f, 0.8f, 0f); // 금색
         }
-        else if (pressQuality >= goodPressMinThreshold)
+        // 명확하게 goodPressMinThreshold 이상이고 perfectPressMinThreshold 미만일 때만 Good 판정
+        else if (pressQuality >= goodPressMinThreshold && pressQuality < perfectPressMinThreshold)
         {
             pressResult = PressQualityResult.Good;
             resultString = "GOOD!";
             resultColor = new Color(0f, 0.8f, 0.2f); // 녹색
         }
+        // 그 외 경우는 Miss (이미 설정됨)
         
         // 결과 저장 및 디버그 로그
         lastPressResult = pressResult;
