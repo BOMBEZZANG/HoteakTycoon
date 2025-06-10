@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 51436dee8c5dad7408126680d1f6c0e7
+guid: 9118eb3a73913da468d50a2de0be1ab3
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7947874647871885614
-    second: "\uD310\uB9E4_0"
+      213: -1108240182689225563
+    second: angry_icon_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "\uD310\uB9E4_0"
+      name: angry_icon_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 335
-        height: 452
+        x: 11
+        y: 14
+        width: 44
+        height: 47
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2de634e0e1a73b190800000000000000
-      internalID: -7947874647871885614
+      spriteID: 5a4aef0fc6dbe90f0800000000000000
+      internalID: -1108240182689225563
       vertices: []
       indices: 
       edges: []
@@ -147,8 +147,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      "\uD310\uB9E4_0": -7947874647871885614
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

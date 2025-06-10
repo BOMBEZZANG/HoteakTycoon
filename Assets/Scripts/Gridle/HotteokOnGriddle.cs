@@ -321,6 +321,11 @@ public class HotteokOnGriddle : MonoBehaviour
             
             StartCoroutine(ImprovedFlipHotteok());
         }
+        else if (currentState == GriddleState.Cooked)
+        {
+            // 🆕 완성된 호떡을 탭했을 때 스택 판매대로 전달
+            SendToStackSalesCounter();
+        }
     }
 
     // 2단계: 탭 피드백 효과
@@ -469,7 +474,7 @@ public class HotteokOnGriddle : MonoBehaviour
                         {
                             Debug.Log(">>> 테스트: Screen Space UI를 화면 중앙으로 이동");
                             Vector3 hotteokScreenPos = Camera.main.WorldToScreenPoint(transform.position);
-                            pressGaugeSlider.transform.position = new Vector3(hotteokScreenPos.x, hotteokScreenPos.y + 20, 0);
+                            pressGaugeSlider.transform.position = new Vector3(hotteokScreenPos.x, hotteokScreenPos.y + 100, 0);
                         }
                         else if (canvas.renderMode == RenderMode.WorldSpace)
                         {
@@ -641,8 +646,109 @@ public class HotteokOnGriddle : MonoBehaviour
         else if (currentFilling == PreparationUI.FillingType.Seed)
             spriteRenderer.sprite = cookedSeedSprite;
 
-        // 완성 효과 (선택사항)
+        // 완성 효과
         ShowCompletionEffect();
+        
+        // 판매대로 전달 안내 표시
+        ShowDeliveryGuide();
+    }
+
+    /// <summary>
+    /// 🆕 완성된 호떡을 스택 판매대로 전달
+    /// </summary>
+    private void SendToStackSalesCounter()
+    {
+        if (currentState != GriddleState.Cooked)
+        {
+            Debug.Log("완성되지 않은 호떡은 스택 판매대로 보낼 수 없습니다!");
+            return;
+        }
+
+        if (StackSalesCounter.Instance == null)
+        {
+            Debug.LogError("StackSalesCounter가 씬에 없습니다! 스택 판매대를 설정해주세요.");
+            return;
+        }
+
+        // 스택 판매대에 추가 가능한지 확인
+        if (!StackSalesCounter.Instance.CanAddHotteokToStack(currentFilling))
+        {
+            Debug.Log(currentFilling + " 스택이 가득참! 호떡을 보낼 수 없습니다.");
+            ShowStackFullWarning();
+            return;
+        }
+
+        Debug.Log("완성된 " + currentFilling + " 호떡을 스택 판매대로 전달!");
+
+        // 철판 슬롯 비우기 (GriddleSlot에서 관리)
+        GriddleSlot parentSlot = GetComponentInParent<GriddleSlot>();
+        if (parentSlot == null)
+        {
+            // 부모에서 찾지 못했다면 다른 방법으로 찾기
+            Transform current = transform.parent;
+            while (current != null && parentSlot == null)
+            {
+                parentSlot = current.GetComponent<GriddleSlot>();
+                current = current.parent;
+            }
+        }
+
+        // 스택 판매대로 호떡 전달
+        StackSalesCounter.Instance.AddHotteokToStack(gameObject, currentFilling);
+
+        // 철판 슬롯을 비움 (MakeSlotEmpty 호출)
+        if (parentSlot != null)
+        {
+            parentSlot.MakeSlotEmpty();
+        }
+        else
+        {
+            Debug.LogWarning("GriddleSlot을 찾을 수 없어서 수동으로 슬롯을 정리합니다.");
+            // GriddleSlot을 찾지 못한 경우를 대비한 대안
+            // 이 경우 StackSalesCounter에서 호떡을 가져간 후 이 오브젝트는 비활성화됨
+        }
+    }
+
+    /// <summary>
+    /// 🆕 스택 판매대로 전달 안내 표시
+    /// </summary>
+    private void ShowDeliveryGuide()
+    {
+        Debug.Log("🎉 호떡 완성! 탭하여 스택 판매대로 보내세요!");
+        
+        // 완성된 호떡 위에 안내 텍스트나 아이콘 표시 (선택사항)
+        // 예: "TAP TO STACK" 텍스트나 위쪽 화살표 아이콘
+    }
+
+    /// <summary>
+    /// 🆕 스택 가득참 경고 표시
+    /// </summary>
+    private void ShowStackFullWarning()
+    {
+        Debug.Log("⚠️ " + currentFilling + " 스택이 가득찼습니다! 호떡을 손님에게 판매하세요!");
+        
+        // UI 경고 표시 (빨간색 깜빡임 등)
+        if (spriteRenderer != null)
+        {
+            StartCoroutine(BlinkWarning());
+        }
+    }
+
+    /// <summary>
+    /// 🆕 경고 깜빡임 효과
+    /// </summary>
+    private IEnumerator BlinkWarning()
+    {
+        Color originalColor = spriteRenderer.color;
+        Color warningColor = Color.red;
+        
+        for (int i = 0; i < 3; i++) // 3번 깜빡임
+        {
+            spriteRenderer.color = warningColor;
+            yield return new WaitForSeconds(0.2f);
+            spriteRenderer.color = originalColor;
+            yield return new WaitForSeconds(0.2f);
+        }
     }
 
     private void HandleBurnt()

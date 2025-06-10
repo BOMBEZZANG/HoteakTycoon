@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 51436dee8c5dad7408126680d1f6c0e7
+guid: b0b7afdb714794b4ab222cbf7bde63fa
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7947874647871885614
-    second: "\uD310\uB9E4_0"
+      213: -5633753054908380596
+    second: seed_hotteok_custom_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "\uD310\uB9E4_0"
+      name: seed_hotteok_custom_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 335
-        height: 452
+        x: 7
+        y: 6
+        width: 51
+        height: 51
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2de634e0e1a73b190800000000000000
-      internalID: -7947874647871885614
+      spriteID: c4a0ae90273e0d1b0800000000000000
+      internalID: -5633753054908380596
       vertices: []
       indices: 
       edges: []
@@ -147,8 +147,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      "\uD310\uB9E4_0": -7947874647871885614
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

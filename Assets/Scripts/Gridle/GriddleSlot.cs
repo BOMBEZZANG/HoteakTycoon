@@ -86,11 +86,31 @@ public class GriddleSlot : MonoBehaviour
     }
 
     // 나중에 호떡이 완성되거나 타서 사라질 때 호출될 함수
+    // 나중에 호떡이 완성되거나 타서 사라질 때 호출될 함수
+   // 나중에 호떡이 완성되거나 타서 사라질 때 호출될 함수
     public void MakeSlotEmpty()
     {
         if (currentHotteokOnSlot != null)
         {
-            Destroy(currentHotteokOnSlot); // 슬롯 위의 호떡 오브젝트 제거
+            // 🆕 호떡이 판매대로 이동하는 경우와 일반적으로 제거되는 경우를 구분
+            HotteokOnGriddle hotteokScript = currentHotteokOnSlot.GetComponent<HotteokOnGriddle>();
+            
+            // 호떡이 완성 상태이고 StackSalesCounter로 이동 중인 경우
+            bool isMovingToStack = (hotteokScript != null && 
+                                   hotteokScript.currentState == HotteokOnGriddle.GriddleState.Cooked &&
+                                   !hotteokScript.enabled); // StackSalesCounter에서 스크립트를 비활성화함
+            
+            if (!isMovingToStack)
+            {
+                // 일반적인 경우 (탄 호떡 등): 오브젝트 제거
+                Destroy(currentHotteokOnSlot);
+            }
+            else
+            {
+                // 스택 판매대로 이동하는 경우: 오브젝트는 StackSalesCounter가 관리하므로 여기서는 참조만 해제
+                Debug.Log(gameObject.name + "의 호떡이 스택 판매대로 이동함 - 슬롯만 비움");
+            }
+            
             currentHotteokOnSlot = null;
         }
         isOccupied = false;

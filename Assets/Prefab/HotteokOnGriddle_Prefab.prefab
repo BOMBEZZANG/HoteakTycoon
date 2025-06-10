@@ -981,8 +981,8 @@ MonoBehaviour:
   pressedSeedSprite: {fileID: -4356015486030424005, guid: c1c65f1756adb0c44adea10b19b8f13a, type: 3}
   flippedSugarSprite: {fileID: 3755606153230528415, guid: 2f61f161beae5c8418ef726b15bd22a5, type: 3}
   flippedSeedSprite: {fileID: 7560782464706946789, guid: 47b3eae278d5e6d43a21a45563962021, type: 3}
-  cookedSugarSprite: {fileID: -7947874647871885614, guid: 51436dee8c5dad7408126680d1f6c0e7, type: 3}
-  cookedSeedSprite: {fileID: 3610103580277048171, guid: 5930176519341c940a4ee742081e2de5, type: 3}
+  cookedSugarSprite: {fileID: -2605615185610052947, guid: 33a628eb3d0825740bd01a1a3be01ab0, type: 3}
+  cookedSeedSprite: {fileID: -3331199425476054103, guid: b9ac12e7810d0b940b70e1a8a5356f29, type: 3}
   burntSprite: {fileID: -4749823285884285777, guid: 2523999ea0e969046af44b4fd71982e7, type: 3}
 --- !u!61 &2615660671197094005
 BoxCollider2D:
