@@ -663,6 +663,11 @@ MonoBehaviour:
   stackFullWarningSound: {fileID: 0}
   selectedColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   selectionIndicator: {fileID: 0}
+  NEVER_MOVE_HOTTEOK: 1
+  enableFlyAnimations: 1
+  DISABLE_ALL_SELECTION_EFFECTS: 1
+  DISABLE_STACK_REORGANIZATION: 1
+  enableDebugLogs: 1
 --- !u!4 &541144083
 Transform:
   m_ObjectHideFlags: 0
@@ -1814,7 +1819,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   customerPrefab: {fileID: 1697865906646941406, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
-  maxCustomers: 3
+  maxCustomers: 1
   minSpawnInterval: 3
   maxSpawnInterval: 8
   autoSpawn: 1
@@ -1824,7 +1829,7 @@ MonoBehaviour:
   - {fileID: 638146282}
   enterStartOffset: {x: -8, y: 0, z: 0}
   exitEndOffset: {x: 8, y: 0, z: 0}
-  baseWaitTime: 20
+  baseWaitTime: 60
   difficultyIncreaseRate: 0.9
   minWaitTime: 8
   difficultyIncreaseInterval: 5

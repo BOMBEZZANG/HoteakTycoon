@@ -1,19 +1,20 @@
 // GriddleSlot.cs
+// [최종 수정본] 호떡 생성 시 자신의 참조를 전달하도록 수정
+
 using UnityEngine;
 
 public class GriddleSlot : MonoBehaviour
 {
     [Header("연결 필수")]
-    public PreparationUI preparationUILogic; // UIManager 등 PreparationUI 스크립트를 가진 오브젝트
-    public GameObject hotteokPrefabToSpawn;  // 철판에 생성될 호떡 프리팹
+    public PreparationUI preparationUILogic;
+    public GameObject hotteokPrefabToSpawn;
 
     [Header("철판 위 호떡 초기 스프라이트")]
     public Sprite unpressedSugarSprite;
     public Sprite unpressedSeedSprite;
-    // public Sprite unpressedNoneSprite; // 속 없는 호떡이 가능하다면
 
     private bool isOccupied = false;
-    private GameObject currentHotteokOnSlot = null; // 현재 이 슬롯에 있는 호떡 오브젝트
+    private GameObject currentHotteokOnSlot = null;
 
     void Start()
     {
@@ -23,14 +24,12 @@ public class GriddleSlot : MonoBehaviour
         if (unpressedSeedSprite == null) Debug.LogError(gameObject.name + ": UnpressedSeedSprite가 연결되지 않았습니다!");
     }
 
-    void OnMouseDown() // 이 GameObject에 Collider2D가 있어야 작동합니다.
+    void OnMouseDown()
     {
         Debug.Log(gameObject.name + " 클릭됨. 현재 점유 상태: " + isOccupied);
 
         if (isOccupied)
         {
-            // 이미 호떡이 있는 슬롯을 클릭한 경우 (나중에 이 호떡을 누르거나 뒤집는 로직으로 연결)
-            // 지금은 아무것도 안 함. 또는 현재 호떡의 상태를 로그로 보여줄 수 있음.
             if(currentHotteokOnSlot != null)
             {
                  Debug.Log(gameObject.name + "에는 이미 호떡이 있습니다. 종류: " + currentHotteokOnSlot.GetComponent<HotteokOnGriddle>().currentFilling);
@@ -38,7 +37,6 @@ public class GriddleSlot : MonoBehaviour
             return;
         }
 
-        // 슬롯이 비어있다면, 준비대에서 호떡을 가져올 수 있는지 확인
         if (preparationUILogic != null && preparationUILogic.IsHotteokReadyForGriddle())
         {
             PreparationUI.FillingType fillingToPlace = preparationUILogic.GetPreparedFillingType();
@@ -46,19 +44,17 @@ public class GriddleSlot : MonoBehaviour
 
             if (hotteokPrefabToSpawn != null && initialSpriteToUse != null)
             {
-                // 새 호떡 오브젝트를 이 슬롯의 위치에 생성
                 currentHotteokOnSlot = Instantiate(hotteokPrefabToSpawn, transform.position, Quaternion.identity);
-                // 부모를 이 슬롯으로 설정하면 정리하기 편함 (선택사항)
-                // currentHotteokOnSlot.transform.SetParent(transform);
 
                 HotteokOnGriddle hotteokScript = currentHotteokOnSlot.GetComponent<HotteokOnGriddle>();
                 if (hotteokScript != null)
                 {
-                    hotteokScript.Initialize(fillingToPlace, initialSpriteToUse);
+                    // [개선] Initialize 함수에 세 번째 인자로 this를 추가하여 자신을 알려줌
+                    hotteokScript.Initialize(fillingToPlace, initialSpriteToUse, this); 
                 }
 
                 isOccupied = true;
-                preparationUILogic.OnHotteokPlacedOnGriddle(); // 준비대 비우기 및 UI 초기화 요청
+                preparationUILogic.OnHotteokPlacedOnGriddle();
 
                 Debug.Log(fillingToPlace.ToString() + " 속 호떡이 " + gameObject.name + "에 놓였습니다.");
             }
@@ -77,42 +73,17 @@ public class GriddleSlot : MonoBehaviour
                 return unpressedSugarSprite;
             case PreparationUI.FillingType.Seed:
                 return unpressedSeedSprite;
-            // case PreparationUI.FillingType.None:
-            // return unpressedNoneSprite;
             default:
                 Debug.LogError("알 수 없는 속 타입 또는 None 타입에 대한 초기 스프라이트가 없습니다: " + fillingType);
                 return null;
         }
     }
 
-    // 나중에 호떡이 완성되거나 타서 사라질 때 호출될 함수
-    // 나중에 호떡이 완성되거나 타서 사라질 때 호출될 함수
-   // 나중에 호떡이 완성되거나 타서 사라질 때 호출될 함수
     public void MakeSlotEmpty()
     {
-        if (currentHotteokOnSlot != null)
-        {
-            // 🆕 호떡이 판매대로 이동하는 경우와 일반적으로 제거되는 경우를 구분
-            HotteokOnGriddle hotteokScript = currentHotteokOnSlot.GetComponent<HotteokOnGriddle>();
-            
-            // 호떡이 완성 상태이고 StackSalesCounter로 이동 중인 경우
-            bool isMovingToStack = (hotteokScript != null && 
-                                   hotteokScript.currentState == HotteokOnGriddle.GriddleState.Cooked &&
-                                   !hotteokScript.enabled); // StackSalesCounter에서 스크립트를 비활성화함
-            
-            if (!isMovingToStack)
-            {
-                // 일반적인 경우 (탄 호떡 등): 오브젝트 제거
-                Destroy(currentHotteokOnSlot);
-            }
-            else
-            {
-                // 스택 판매대로 이동하는 경우: 오브젝트는 StackSalesCounter가 관리하므로 여기서는 참조만 해제
-                Debug.Log(gameObject.name + "의 호떡이 스택 판매대로 이동함 - 슬롯만 비움");
-            }
-            
-            currentHotteokOnSlot = null;
-        }
+        // 이제 호떡 오브젝트 자체는 StackSalesCounter가 관리하므로,
+        // 이 슬롯은 단순히 점유 상태와 참조만 관리합니다.
+        currentHotteokOnSlot = null;
         isOccupied = false;
         Debug.Log(gameObject.name + " 슬롯이 비워졌습니다.");
     }

@@ -1,5 +1,5 @@
 // Assets/Scripts/HotteokInStack.cs
-// 스택에 있는 호떡의 클릭 선택 동작을 관리하는 스크립트
+// 🔧 호떡 위치 이동 문제 완전 해결 버전 (모든 애니메이션 차단)
 
 using UnityEngine;
 using System.Collections;
@@ -16,14 +16,85 @@ public class HotteokInStack : MonoBehaviour
     public AudioClip selectSound;               // 선택 소리
     public GameObject clickEffect;              // 클릭 이펙트
     
+    [Header("🚨 모든 효과 완전 차단")]
+    public bool enableHoverEffects = false;     // 마우스 오버 효과 (강제 비활성화)
+    public bool enableClickAnimations = false;  // 클릭 애니메이션 (강제 비활성화)
+    public bool enableScaleEffects = false;     // 크기 변화 효과 (강제 비활성화)
+    public bool enablePositionEffects = false;  // 위치 변경 효과 (강제 비활성화)
+    public bool enablePositionDebug = false;    // 위치 변경 감지 (강제 비활성화)
+    
+    [Header("🔒 위치 완전 고정")]
+    public bool LOCK_POSITION_COMPLETELY = true; // 위치 완전 고정
+    
     private StackSalesCounter parentCounter;
     private SpriteRenderer spriteRenderer;
     private bool isSelected = false;
     private bool isHovering = false;
     
+    // 🔒 위치 고정용
+    private Vector3 lockedPosition;
+    private bool positionLocked = false;
+    
     void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
+        
+        // 🚨 모든 애니메이션 효과 강제 비활성화
+        ForceDisableAllEffects();
+    }
+    
+    void Start()
+    {
+        // 🔒 현재 위치를 고정 위치로 설정
+        LockCurrentPosition();
+    }
+    
+    void Update()
+    {
+        // 🔒 위치 완전 고정 시스템
+        if (LOCK_POSITION_COMPLETELY && positionLocked)
+        {
+            EnforceLockedPosition();
+        }
+    }
+    
+    /// <summary>
+    /// 🚨 모든 애니메이션 효과 강제 비활성화
+    /// </summary>
+    void ForceDisableAllEffects()
+    {
+        enableHoverEffects = false;
+        enableClickAnimations = false;
+        enableScaleEffects = false;
+        enablePositionEffects = false;
+        enablePositionDebug = false;
+        
+        Debug.Log($"🚨 [{gameObject.name}] 모든 애니메이션 효과 강제 비활성화됨");
+    }
+    
+    /// <summary>
+    /// 🔒 현재 위치 고정
+    /// </summary>
+    void LockCurrentPosition()
+    {
+        if (LOCK_POSITION_COMPLETELY)
+        {
+            lockedPosition = transform.position;
+            positionLocked = true;
+            Debug.Log($"🔒 [{gameObject.name}] 위치 고정됨: {lockedPosition}");
+        }
+    }
+    
+    /// <summary>
+    /// 🔒 고정된 위치 강제 적용
+    /// </summary>
+    void EnforceLockedPosition()
+    {
+        if (transform.position != lockedPosition)
+        {
+            Debug.LogWarning($"🚨 [{gameObject.name}] 위치 변경 감지 및 강제 복원: {transform.position} → {lockedPosition}");
+            transform.position = lockedPosition;
+        }
     }
     
     /// <summary>
@@ -36,75 +107,125 @@ public class HotteokInStack : MonoBehaviour
         stackIndex = index;
         isSelected = false;
         
+        // 🚨 모든 애니메이션 효과 강제 비활성화
+        ForceDisableAllEffects();
+        
         // 색상 초기화
         if (spriteRenderer != null)
         {
             spriteRenderer.color = normalColor;
         }
         
-        Debug.Log(fillingType + " 호떡이 스택 [" + index + "] 위치에서 초기화됨");
+        // 🔒 위치 고정
+        LockCurrentPosition();
+        
+        Debug.Log($"✅ {fillingType} 호떡이 스택 [{index}] 위치에서 안전하게 초기화됨");
     }
     
     /// <summary>
-    /// 스택에서의 인덱스 업데이트 (다른 호떡이 제거되었을 때)
+    /// 스택에서의 인덱스 업데이트 (위치는 변경하지 않음)
     /// </summary>
     public void UpdateStackIndex(int newIndex)
     {
         stackIndex = newIndex;
-        Debug.Log(fillingType + " 호떡의 스택 인덱스가 " + newIndex + "로 업데이트됨");
+        Debug.Log($"📋 {fillingType} 호떡의 스택 인덱스가 {newIndex}로 업데이트됨 (위치는 고정 유지)");
+    }
+    
+    /// <summary>
+    /// 🔒 새로운 위치 설정 및 고정
+    /// </summary>
+    public void SetAndLockPosition(Vector3 newPosition)
+    {
+        transform.position = newPosition;
+        lockedPosition = newPosition;
+        positionLocked = true;
+        Debug.Log($"🔒 [{gameObject.name}] 새로운 위치로 고정됨: {lockedPosition}");
     }
     
     void OnMouseDown()
     {
-        // 호떡 선택
+        // 🔒 위치 고정 확인
+        Vector3 originalPosition = transform.position;
+        
+        // 🔧 호떡 선택 (위치 변경 절대 없음)
         SelectThisHotteok();
         
-        // 클릭 이펙트
-        ShowClickEffect();
-        
-        // 선택 소리
+        // 🔧 클릭 소리만 (애니메이션 없음)
         if (selectSound != null)
         {
             AudioSource.PlayClipAtPoint(selectSound, transform.position);
+        }
+        
+        // 🔧 간단한 이펙트만 (위치 변경 없음)
+        if (clickEffect != null)
+        {
+            GameObject effect = Instantiate(clickEffect, transform.position, Quaternion.identity);
+            Destroy(effect, 1f);
+        }
+        
+        // 🔒 위치가 변경되었다면 강제로 복원
+        if (transform.position != originalPosition)
+        {
+            Debug.LogWarning($"🚨 [{gameObject.name}] 클릭 중 위치 변경 감지! 강제 복원");
+            transform.position = originalPosition;
+            lockedPosition = originalPosition;
         }
     }
     
     void OnMouseEnter()
     {
+        // 🚨 모든 마우스 오버 효과 완전 차단
+        if (!enableHoverEffects) return;
+        
+        Vector3 originalPosition = transform.position;
+        
         if (!isSelected && !isHovering)
         {
             isHovering = true;
             
-            // 마우스 오버 시 색상 변경
+            // 색상 변경만 (크기/위치 변경 절대 없음)
             if (spriteRenderer != null)
             {
                 spriteRenderer.color = hoverColor;
             }
-            
-            // 살짝 크게 만들기
-            StartCoroutine(ScaleHoverEffect(1.05f));
+        }
+        
+        // 🔒 위치 변경 방지
+        if (transform.position != originalPosition)
+        {
+            transform.position = originalPosition;
+            lockedPosition = originalPosition;
         }
     }
     
     void OnMouseExit()
     {
+        // 🚨 모든 마우스 오버 효과 완전 차단
+        if (!enableHoverEffects) return;
+        
+        Vector3 originalPosition = transform.position;
+        
         if (!isSelected && isHovering)
         {
             isHovering = false;
             
-            // 원래 색상으로 복원
+            // 원래 색상으로 복원 (크기/위치 변경 절대 없음)
             if (spriteRenderer != null)
             {
                 spriteRenderer.color = normalColor;
             }
-            
-            // 원래 크기로 복원
-            StartCoroutine(ScaleHoverEffect(1.0f));
+        }
+        
+        // 🔒 위치 변경 방지
+        if (transform.position != originalPosition)
+        {
+            transform.position = originalPosition;
+            lockedPosition = originalPosition;
         }
     }
     
     /// <summary>
-    /// 이 호떡을 선택
+    /// 🔧 이 호떡을 선택 (위치 변경 절대 금지)
     /// </summary>
     void SelectThisHotteok()
     {
@@ -114,7 +235,7 @@ public class HotteokInStack : MonoBehaviour
             parentCounter.SelectHotteok(gameObject);
             isSelected = true;
             
-            Debug.Log(fillingType + " 호떡이 선택됨! 손님을 클릭하여 전달하세요.");
+            Debug.Log($"✅ {fillingType} 호떡이 선택됨! 손님을 클릭하여 전달하세요.");
         }
     }
     
@@ -123,80 +244,21 @@ public class HotteokInStack : MonoBehaviour
     /// </summary>
     public void Deselect()
     {
+        Vector3 originalPosition = transform.position;
+        
         isSelected = false;
         
         if (spriteRenderer != null)
         {
             spriteRenderer.color = isHovering ? hoverColor : normalColor;
         }
-    }
-    
-    /// <summary>
-    /// 클릭 이펙트 표시
-    /// </summary>
-    void ShowClickEffect()
-    {
-        if (clickEffect != null)
+        
+        // 🔒 위치 변경 방지
+        if (transform.position != originalPosition)
         {
-            GameObject effect = Instantiate(clickEffect, transform.position, Quaternion.identity);
-            Destroy(effect, 1f);
+            transform.position = originalPosition;
+            lockedPosition = originalPosition;
         }
-        
-        // 간단한 펄스 애니메이션
-        StartCoroutine(ClickPulseAnimation());
-    }
-    
-    /// <summary>
-    /// 클릭 시 펄스 애니메이션
-    /// </summary>
-    IEnumerator ClickPulseAnimation()
-    {
-        Vector3 originalScale = transform.localScale;
-        Vector3 bigScale = originalScale * 1.2f;
-        
-        // 크게 되었다가 작아지는 애니메이션
-        float duration = 0.15f;
-        float elapsedTime = 0f;
-        
-        while (elapsedTime < duration)
-        {
-            elapsedTime += Time.deltaTime;
-            float t = elapsedTime / duration;
-            
-            float scaleMultiplier = 1 + 0.2f * Mathf.Sin(t * Mathf.PI);
-            transform.localScale = originalScale * scaleMultiplier;
-            
-            yield return null;
-        }
-        
-        transform.localScale = originalScale;
-    }
-    
-    /// <summary>
-    /// 마우스 오버 시 크기 변화 애니메이션
-    /// </summary>
-    IEnumerator ScaleHoverEffect(float targetScale)
-    {
-        Vector3 startScale = transform.localScale;
-        
-        // 현재 스택 위치에 맞는 기본 크기 계산
-        float baseScale = Mathf.Pow(parentCounter.stackScale, stackIndex);
-        Vector3 baseScaleVector = Vector3.one * baseScale;
-        Vector3 targetScaleVector = baseScaleVector * targetScale;
-        
-        float duration = 0.1f;
-        float elapsedTime = 0f;
-        
-        while (elapsedTime < duration)
-        {
-            elapsedTime += Time.deltaTime;
-            float t = elapsedTime / duration;
-            
-            transform.localScale = Vector3.Lerp(startScale, targetScaleVector, t);
-            yield return null;
-        }
-        
-        transform.localScale = targetScaleVector;
     }
     
     /// <summary>
@@ -219,58 +281,53 @@ public class HotteokInStack : MonoBehaviour
     }
     
     /// <summary>
-    /// 손님에게 전달되었을 때 호출 (나중에 Customer 구현 시 사용)
+    /// 손님에게 전달되었을 때 호출
     /// </summary>
     public void OnDeliveredToCustomer()
     {
-        Debug.Log(fillingType + " 호떡이 손님에게 전달됨!");
+        Debug.Log($"📦 {fillingType} 호떡이 손님에게 전달됨!");
         
-        // 전달 성공 이펙트
-        ShowDeliveryEffect();
-        
-        // 오브젝트는 StackSalesCounter에서 제거됨
+        // 🚨 전달 애니메이션 완전 차단 - 간단한 로그만
+        Debug.Log($"🎉 {fillingType} 호떡 전달 성공!");
     }
     
     /// <summary>
-    /// 전달 성공 이펙트
+    /// 🔧 디버그 정보 출력
     /// </summary>
-    void ShowDeliveryEffect()
+    [ContextMenu("Debug Hotteok Info")]
+    public void PrintDebugInfo()
     {
-        Debug.Log("🎉 " + fillingType + " 호떡 전달 성공!");
+        Debug.Log("=== HotteokInStack Debug Info ===");
+        Debug.Log($"호떡 타입: {fillingType}");
+        Debug.Log($"스택 인덱스: {stackIndex}");
+        Debug.Log($"선택 상태: {isSelected}");
+        Debug.Log($"마우스 오버 상태: {isHovering}");
+        Debug.Log($"현재 위치: {transform.position}");
+        Debug.Log($"고정 위치: {lockedPosition}");
+        Debug.Log($"위치 고정 상태: {positionLocked}");
+        Debug.Log($"현재 크기: {transform.localScale}");
+        Debug.Log($"현재 색상: {(spriteRenderer != null ? spriteRenderer.color.ToString() : "null")}");
+        Debug.Log($"스택 맨 위 여부: {IsTopOfStack()}");
         
-        // 성공 애니메이션
-        StartCoroutine(DeliverySuccessAnimation());
+        Debug.Log("=== 효과 설정 상태 (모두 비활성화됨) ===");
+        Debug.Log($"Hover Effects: {enableHoverEffects}");
+        Debug.Log($"Click Animations: {enableClickAnimations}");
+        Debug.Log($"Scale Effects: {enableScaleEffects}");
+        Debug.Log($"Position Effects: {enablePositionEffects}");
+        Debug.Log($"Position Debug: {enablePositionDebug}");
+        Debug.Log($"🔒 위치 완전 고정: {LOCK_POSITION_COMPLETELY}");
     }
     
     /// <summary>
-    /// 전달 성공 애니메이션
+    /// 🔧 완전 안전 모드로 재설정
     /// </summary>
-    IEnumerator DeliverySuccessAnimation()
+    [ContextMenu("Force Ultra Safe Mode")]
+    public void ForceUltraSafeMode()
     {
-        Vector3 originalScale = transform.localScale;
-        Vector3 originalPosition = transform.position;
+        ForceDisableAllEffects();
+        LOCK_POSITION_COMPLETELY = true;
+        LockCurrentPosition();
         
-        float duration = 0.5f;
-        float elapsedTime = 0f;
-        
-        while (elapsedTime < duration)
-        {
-            elapsedTime += Time.deltaTime;
-            float t = elapsedTime / duration;
-            
-            // 점점 크게 되면서 위로 올라가고 투명해짐
-            float scaleMultiplier = 1 + t * 2;
-            transform.localScale = originalScale * scaleMultiplier;
-            transform.position = originalPosition + Vector3.up * t * 2;
-            
-            if (spriteRenderer != null)
-            {
-                Color color = spriteRenderer.color;
-                color.a = 1 - t;
-                spriteRenderer.color = color;
-            }
-            
-            yield return null;
-        }
+        Debug.Log($"🔒 [{gameObject.name}] 완전 안전 모드 강제 활성화!");
     }
 }
