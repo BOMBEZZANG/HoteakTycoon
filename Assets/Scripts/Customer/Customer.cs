@@ -1,5 +1,5 @@
 // Assets/Scripts/Customer/Customer.cs
-// 개별 손님의 상태 및 행동을 관리하는 핵심 클래스 (다중 주문 시스템)
+// 🔧 손님 이미지 표시 문제 완전 해결 버전
 
 using UnityEngine;
 using System.Collections;
@@ -50,7 +50,7 @@ public class Customer : MonoBehaviour
     public int customerID;
     public string customerName = "손님";
     
-    [Header("🎨 랜덤 스프라이트 시스템")]
+    [Header("🎨 손님 스프라이트 설정")]
     public Sprite[] customerSprites;        // 손님 이미지 3개 배열
     public int selectedSpriteIndex = -1;    // 선택된 스프라이트 인덱스 (-1이면 랜덤)
     
@@ -82,6 +82,7 @@ public class Customer : MonoBehaviour
     private CustomerState currentState = CustomerState.Entering;
     private float currentWaitTime = 0f;
     private bool hasReceivedCompleteOrder = false;
+    private bool isInitialized = false;
     private CustomerUI customerUI;
     private CustomerAnimator customerAnimator;
     private CustomerSpawner parentSpawner;
@@ -103,18 +104,49 @@ public class Customer : MonoBehaviour
             customerCollider.enabled = false; // 들어올 때는 클릭 불가
         }
         
-        // 🎨 랜덤 스프라이트 선택
-        SelectRandomSprite();
+        Debug.Log($"👤 Customer Awake 완료: {gameObject.name}");
     }
     
     /// <summary>
-    /// 🎨 랜덤 스프라이트 선택 및 적용
+    /// 🔧 손님 초기화 (CustomerSpawner에서 호출)
     /// </summary>
-    void SelectRandomSprite()
+    public void InitializeCustomer(int id, string name, CustomerSpawner spawner)
     {
+        customerID = id;
+        customerName = name;
+        parentSpawner = spawner;
+        
+        // 🎨 스프라이트 선택 및 표시
+        SelectAndShowRandomSprite();
+        
+        // 📝 랜덤 주문 생성
+        GenerateRandomOrder();
+        
+        isInitialized = true;
+        
+        Debug.Log($"✅ {customerName} 완전 초기화 완료!");
+    }
+    
+    /// <summary>
+    /// 🎨 스프라이트 선택 및 표시
+    /// </summary>
+    void SelectAndShowRandomSprite()
+    {
+        if (spriteRenderer == null)
+        {
+            Debug.LogError($"❌ {customerName}: SpriteRenderer가 null입니다!");
+            return;
+        }
+        
         if (customerSprites == null || customerSprites.Length == 0)
         {
-            Debug.LogWarning("⚠️ customerSprites 배열이 비어있습니다! Inspector에서 손님 이미지를 설정해주세요.");
+            Debug.LogWarning($"⚠️ {customerName}: customerSprites 배열이 비어있습니다! Inspector에서 손님 이미지를 설정해주세요.");
+            
+            // 🔧 기본 스프라이트로 표시 (디버그용 - 흰색 사각형)
+            spriteRenderer.sprite = null;
+            spriteRenderer.color = Color.red; // 빨간색으로 표시해서 보이게 함
+            spriteRenderer.enabled = true;
+            Debug.LogWarning($"🔧 {customerName}: 기본 스프라이트로 표시됨 (빨간색 사각형)");
             return;
         }
         
@@ -127,20 +159,43 @@ public class Customer : MonoBehaviour
         // 인덱스 범위 확인
         if (selectedSpriteIndex >= 0 && selectedSpriteIndex < customerSprites.Length)
         {
-            if (spriteRenderer != null && customerSprites[selectedSpriteIndex] != null)
+            Sprite selectedSprite = customerSprites[selectedSpriteIndex];
+            
+            if (selectedSprite != null)
             {
-                spriteRenderer.sprite = customerSprites[selectedSpriteIndex];
-                Debug.Log($"🎨 손님 {customerID}: 스프라이트 [{selectedSpriteIndex}] 적용됨");
+                spriteRenderer.sprite = selectedSprite;
+                spriteRenderer.color = Color.white; // 정상 색상
+                spriteRenderer.enabled = true;
+                Debug.Log($"🎨 {customerName}: 스프라이트 [{selectedSpriteIndex}] '{selectedSprite.name}' 적용됨");
             }
             else
             {
-                Debug.LogError($"❌ 스프라이트 또는 SpriteRenderer가 null입니다! 인덱스: {selectedSpriteIndex}");
+                Debug.LogError($"❌ {customerName}: customerSprites[{selectedSpriteIndex}]가 null입니다!");
+                
+                // 🔧 null 스프라이트라도 렌더러는 활성화
+                spriteRenderer.sprite = null;
+                spriteRenderer.color = Color.yellow; // 노란색으로 표시
+                spriteRenderer.enabled = true;
+                Debug.LogWarning($"🔧 {customerName}: null 스프라이트 - 노란색으로 표시됨");
             }
         }
         else
         {
-            Debug.LogError($"❌ 잘못된 스프라이트 인덱스: {selectedSpriteIndex} (배열 크기: {customerSprites.Length})");
+            Debug.LogError($"❌ {customerName}: 잘못된 스프라이트 인덱스 {selectedSpriteIndex} (배열 크기: {customerSprites.Length})");
+            
+            // 🔧 인덱스 오류 시 첫 번째 스프라이트 사용
+            if (customerSprites.Length > 0)
+            {
+                selectedSpriteIndex = 0;
+                spriteRenderer.sprite = customerSprites[0];
+                spriteRenderer.color = Color.white;
+                spriteRenderer.enabled = true;
+                Debug.LogWarning($"🔧 {customerName}: 첫 번째 스프라이트로 복구됨");
+            }
         }
+        
+        // 🔍 최종 상태 확인
+        Debug.Log($"🔍 {customerName} 렌더러 최종 상태: enabled={spriteRenderer.enabled}, sprite={spriteRenderer.sprite?.name ?? "null"}, color={spriteRenderer.color}");
     }
     
     /// <summary>
@@ -202,104 +257,17 @@ public class Customer : MonoBehaviour
         Debug.Log($"📝 {customerName} 주문 생성: {GetOrderSummary()}");
     }
     
-    /// <summary>
-    /// 📝 주문 요약 텍스트 생성
-    /// </summary>
-    public string GetOrderSummary()
-    {
-        if (orderItems.Count == 0) return "주문 없음";
-        
-        string summary = "";
-        for (int i = 0; i < orderItems.Count; i++)
-        {
-            OrderItem item = orderItems[i];
-            string itemName = GetHotteokName(item.fillingType);
-            summary += $"{itemName} {item.quantity}개";
-            
-            if (i < orderItems.Count - 1)
-            {
-                summary += ", ";
-            }
-        }
-        return summary;
-    }
-    
-    /// <summary>
-    /// 📝 주문 진행 상황 텍스트 생성
-    /// </summary>
-    public string GetOrderProgress()
-    {
-        if (orderItems.Count == 0) return "주문 없음";
-        
-        string progress = "";
-        for (int i = 0; i < orderItems.Count; i++)
-        {
-            OrderItem item = orderItems[i];
-            string itemName = GetHotteokName(item.fillingType);
-            progress += $"{itemName} {item.receivedQuantity}/{item.quantity}";
-            
-            if (i < orderItems.Count - 1)
-            {
-                progress += ", ";
-            }
-        }
-        return progress;
-    }
-    
-    /// <summary>
-    /// 📝 전체 주문이 완료되었는지 확인
-    /// </summary>
-    public bool IsOrderComplete()
-    {
-        if (orderItems.Count == 0) return false;
-        
-        foreach (OrderItem item in orderItems)
-        {
-            if (!item.IsCompleted())
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-    
-    /// <summary>
-    /// 📝 특정 타입의 호떡을 주문했는지 확인
-    /// </summary>
-    public bool HasOrderedType(PreparationUI.FillingType type)
-    {
-        return orderItems.Find(item => item.fillingType == type && !item.IsCompleted()) != null;
-    }
-    
-    /// <summary>
-    /// 📝 특정 타입의 남은 주문 개수 반환
-    /// </summary>
-    public int GetRemainingQuantity(PreparationUI.FillingType type)
-    {
-        OrderItem item = orderItems.Find(i => i.fillingType == type);
-        return item?.GetRemainingQuantity() ?? 0;
-    }
-    
-    /// <summary>
-    /// 🎨 특정 스프라이트로 설정 (외부에서 호출 가능)
-    /// </summary>
-    public void SetCustomerSprite(int spriteIndex)
-    {
-        selectedSpriteIndex = spriteIndex;
-        SelectRandomSprite();
-    }
-    
-    /// <summary>
-    /// 🎨 현재 선택된 스프라이트 인덱스 반환
-    /// </summary>
-    public int GetSelectedSpriteIndex()
-    {
-        return selectedSpriteIndex;
-    }
-    
     void Start()
     {
-        StartCustomerJourney();
+        // 🔧 초기화가 완료된 후에만 여정 시작
+        if (isInitialized)
+        {
+            StartCustomerJourney();
+        }
+        else
+        {
+            Debug.LogWarning($"⚠️ {gameObject.name} 초기화가 완료되지 않아 여정을 시작할 수 없습니다!");
+        }
     }
     
     void Update()
@@ -312,13 +280,14 @@ public class Customer : MonoBehaviour
     /// </summary>
     void StartCustomerJourney()
     {
-        // 입장 위치에서 시작
-        transform.position = enterStartPosition;
-        
-        // 📝 랜덤 주문 생성
-        GenerateRandomOrder();
+        if (enterStartPosition == Vector3.zero)
+        {
+            Debug.LogError($"❌ {customerName}의 입장 위치가 설정되지 않았습니다!");
+            return;
+        }
         
         Debug.Log($"👤 {customerName} (스프라이트 {selectedSpriteIndex}) 입장! 주문: {GetOrderSummary()}");
+        Debug.Log($"   현재 위치: {transform.position}");
         
         // 입장 애니메이션 시작
         ChangeState(CustomerState.Entering);
@@ -760,27 +729,88 @@ public class Customer : MonoBehaviour
         Destroy(gameObject);
     }
     
-    /// <summary>
-    /// 스포너 설정
-    /// </summary>
+    // ===== 유틸리티 함수들 =====
+    
     public void SetSpawner(CustomerSpawner spawner)
     {
         parentSpawner = spawner;
     }
     
-    /// <summary>
-    /// 위치 설정
-    /// </summary>
     public void SetPositions(Vector3 enterPos, Vector3 counterPos, Vector3 exitPos)
     {
         enterStartPosition = enterPos;
         counterPosition = counterPos;
         exitEndPosition = exitPos;
+        
+        Debug.Log($"📍 {customerName} 위치 설정됨:");
+        Debug.Log($"   입장: {enterStartPosition}");
+        Debug.Log($"   카운터: {counterPosition}");
+        Debug.Log($"   퇴장: {exitEndPosition}");
     }
     
-    /// <summary>
-    /// 호떡 이름 반환
-    /// </summary>
+    public string GetOrderSummary()
+    {
+        if (orderItems.Count == 0) return "주문 없음";
+        
+        string summary = "";
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            OrderItem item = orderItems[i];
+            string itemName = GetHotteokName(item.fillingType);
+            summary += $"{itemName} {item.quantity}개";
+            
+            if (i < orderItems.Count - 1)
+            {
+                summary += ", ";
+            }
+        }
+        return summary;
+    }
+    
+    public string GetOrderProgress()
+    {
+        if (orderItems.Count == 0) return "주문 없음";
+        
+        string progress = "";
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            OrderItem item = orderItems[i];
+            string itemName = GetHotteokName(item.fillingType);
+            progress += $"{itemName} {item.receivedQuantity}/{item.quantity}";
+            
+            if (i < orderItems.Count - 1)
+            {
+                progress += ", ";
+            }
+        }
+        return progress;
+    }
+    
+    public bool IsOrderComplete()
+    {
+        if (orderItems.Count == 0) return false;
+        
+        foreach (OrderItem item in orderItems)
+        {
+            if (!item.IsCompleted())
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    public bool HasOrderedType(PreparationUI.FillingType type)
+    {
+        return orderItems.Find(item => item.fillingType == type && !item.IsCompleted()) != null;
+    }
+    
+    public int GetRemainingQuantity(PreparationUI.FillingType type)
+    {
+        OrderItem item = orderItems.Find(i => i.fillingType == type);
+        return item?.GetRemainingQuantity() ?? 0;
+    }
+    
     string GetHotteokName(PreparationUI.FillingType type)
     {
         switch (type)
@@ -794,25 +824,16 @@ public class Customer : MonoBehaviour
         }
     }
     
-    /// <summary>
-    /// 현재 상태 반환
-    /// </summary>
     public CustomerState GetCurrentState()
     {
         return currentState;
     }
     
-    /// <summary>
-    /// 대기 진행도 반환 (0~1)
-    /// </summary>
     public float GetWaitProgress()
     {
         return Mathf.Clamp01(currentWaitTime / maxWaitTime);
     }
     
-    /// <summary>
-    /// 📝 주문 항목 리스트 반환 (UI에서 사용)
-    /// </summary>
     public List<OrderItem> GetOrderItems()
     {
         return new List<OrderItem>(orderItems);

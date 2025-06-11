@@ -1,5 +1,5 @@
 // Assets/Scripts/Customer/CustomerSpawner.cs
-// 손님 생성 및 전체 관리를 담당하는 시스템 (간단 버전)
+// 🔧 손님 이미지 표시 문제 완전 해결 버전
 
 using UnityEngine;
 using System.Collections;
@@ -207,7 +207,7 @@ public class CustomerSpawner : MonoBehaviour
     }
     
     /// <summary>
-    /// 손님 생성
+    /// 🔧 손님 생성 (이미지 표시 문제 해결)
     /// </summary>
     public void SpawnCustomer()
     {
@@ -255,7 +255,7 @@ public class CustomerSpawner : MonoBehaviour
         DebugLog($"   입장 위치: {enterPos}");
         DebugLog($"   퇴장 위치: {exitPos}");
         
-        // 손님 생성
+        // 🔧 손님 생성 (입장 위치에서 바로 생성)
         GameObject customerObj = Instantiate(customerPrefab, enterPos, Quaternion.identity);
         Customer customer = customerObj.GetComponent<Customer>();
         
@@ -270,11 +270,16 @@ public class CustomerSpawner : MonoBehaviour
             return;
         }
         
-        // 손님 설정
-        customer.customerID = customerIdCounter++;
-        customer.customerName = $"손님 {customer.customerID}";
+        // 🔧 Customer 설정 및 초기화
+        int customerId = customerIdCounter++;
+        string customerName = $"손님 {customerId}";
+        
+        // 기본 설정
         customer.SetSpawner(this);
         customer.SetPositions(enterPos, counterPos, exitPos);
+        
+        // 🔧 InitializeCustomer 메서드 호출 (스프라이트 초기화 포함)
+        customer.InitializeCustomer(customerId, customerName, this);
         
         // 난이도에 따른 대기 시간 조정
         float adjustedWaitTime = CalculateWaitTime();
@@ -286,9 +291,21 @@ public class CustomerSpawner : MonoBehaviour
         // 문 벨 소리
         PlayDoorBellSound();
         
-        DebugLog($"👤 {customer.customerName} 생성 완료!");
+        DebugLog($"👤 {customerName} 생성 완료!");
+        DebugLog($"   ID: {customerId}");
         DebugLog($"   위치: {customerObj.transform.position}");
         DebugLog($"   대기시간: {adjustedWaitTime:F1}초");
+        
+        // 🔍 스프라이트 렌더러 상태 확인
+        SpriteRenderer customerSprite = customer.GetComponent<SpriteRenderer>();
+        if (customerSprite != null)
+        {
+            DebugLog($"   스프라이트 렌더러: enabled={customerSprite.enabled}, sprite={customerSprite.sprite?.name ?? "null"}");
+        }
+        else
+        {
+            Debug.LogError($"❌ {customerName}: SpriteRenderer를 찾을 수 없습니다!");
+        }
         
         // 이벤트 발생
         OnCustomerSpawned?.Invoke(customer);

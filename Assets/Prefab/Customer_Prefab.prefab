@@ -192,7 +192,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 10
   m_Sprite: {fileID: 1701415535392139205, guid: feb090c2e29c35b46876a234598d7ead, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -285,6 +285,7 @@ MonoBehaviour:
   satisfactionRewardPerItem: 50
   angryPenalty: -50
   bonusForCompleteOrder: 50
+  isInitialized: 0
 --- !u!114 &7531576993045240681
 MonoBehaviour:
   m_ObjectHideFlags: 0
