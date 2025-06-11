@@ -1,5 +1,5 @@
 // Assets/Scripts/Gridle/HotteokOnGriddle.cs
-// [최종 수정본] 그리들 슬롯 직접 참조 및 UI 위치 계산 단순화 적용
+// 🔥 탄 호떡 제거 기능 추가 버전
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,7 +33,7 @@ public class HotteokOnGriddle : MonoBehaviour
     public GriddleState currentState = GriddleState.Cooking_Unpressed;
     private PressQualityResult lastPressResult = PressQualityResult.Miss;
 
-    // [개선] 자신을 생성한 그리들 슬롯을 직접 참조
+    // 자신을 생성한 그리들 슬롯을 직접 참조
     private GriddleSlot ownerGriddleSlot;
 
     [Header("시간 설정")]
@@ -87,6 +87,11 @@ public class HotteokOnGriddle : MonoBehaviour
     public TextMeshProUGUI cookingTimeText;
     public Color almostDoneColor = new Color(1f, 0.5f, 0f, 1f);
 
+    [Header("🔥 탄 호떡 처리 설정")]
+    public AudioClip burntRemovalSound;         // 탄 호떡 제거 소리
+    public GameObject burntRemovalEffect;       // 탄 호떡 제거 이펙트
+    public float burntRemovalAnimationTime = 0.5f; // 제거 애니메이션 시간
+
     [Header("상태별 스프라이트")]
     public Sprite initialUnpressedSprite;
     public Sprite readyToPressSugarSprite;
@@ -113,7 +118,9 @@ public class HotteokOnGriddle : MonoBehaviour
         if (cookingProgressSlider != null) cookingProgressSlider.gameObject.SetActive(false);
     }
     
-    // [개선] Initialize 함수가 GriddleSlot 참조를 받도록 수정
+    /// <summary>
+    /// Initialize 함수가 GriddleSlot 참조를 받도록 수정
+    /// </summary>
     public void Initialize(PreparationUI.FillingType fillingType, Sprite startingSprite, GriddleSlot owner)
     {
         currentFilling = fillingType;
@@ -309,6 +316,11 @@ public class HotteokOnGriddle : MonoBehaviour
         {
             SendToStackSalesCounter();
         }
+        else if (currentState == GriddleState.Burnt)
+        {
+            // 🔥 탄 호떡 클릭 시 제거
+            RemoveBurntHotteok();
+        }
     }
 
     private void ShowTapFeedback(Vector3 position)
@@ -413,7 +425,7 @@ public class HotteokOnGriddle : MonoBehaviour
                     pressGaugeSlider.gameObject.SetActive(true);
                     pressGaugeSlider.value = 0;
 
-                    // [개선] UI 위치 계산 단순화 (ScreenSpace-Overlay 캔버스 기준)
+                    // UI 위치 계산 단순화 (ScreenSpace-Overlay 캔버스 기준)
                     Vector3 hotteokScreenPosition = Camera.main.WorldToScreenPoint(transform.position);
                     pressGaugeSlider.transform.position = hotteokScreenPosition + new Vector3(0, 80, 0);
 
@@ -576,7 +588,7 @@ public class HotteokOnGriddle : MonoBehaviour
 
         StackSalesCounter.Instance.AddHotteokToStack(gameObject, currentFilling);
 
-        // [개선] 저장해둔 참조를 사용하여 슬롯을 비움
+        // 저장해둔 참조를 사용하여 슬롯을 비움
         if (ownerGriddleSlot != null)
         {
             ownerGriddleSlot.MakeSlotEmpty();
@@ -585,6 +597,93 @@ public class HotteokOnGriddle : MonoBehaviour
         {
             Debug.LogError("ownerGriddleSlot이 지정되지 않았습니다!");
         }
+    }
+
+    /// <summary>
+    /// 🔥 탄 호떡 제거 처리
+    /// </summary>
+    private void RemoveBurntHotteok()
+    {
+        Debug.Log("🔥 탄 호떡을 제거합니다!");
+
+        // 제거 이펙트 표시
+        ShowBurntRemovalEffects();
+
+        // 제거 애니메이션 시작
+        StartCoroutine(BurntRemovalAnimation());
+    }
+
+    /// <summary>
+    /// 🔥 탄 호떡 제거 이펙트
+    /// </summary>
+    private void ShowBurntRemovalEffects()
+    {
+        // 제거 소리
+        if (burntRemovalSound != null)
+        {
+            AudioSource.PlayClipAtPoint(burntRemovalSound, transform.position);
+        }
+
+        // 제거 이펙트
+        if (burntRemovalEffect != null)
+        {
+            GameObject effect = Instantiate(burntRemovalEffect, transform.position, Quaternion.identity);
+            Destroy(effect, 2f);
+        }
+    }
+
+    /// <summary>
+    /// 🔥 탄 호떡 제거 애니메이션
+    /// </summary>
+    IEnumerator BurntRemovalAnimation()
+    {
+        Vector3 startPosition = transform.position;
+        Vector3 startScale = transform.localScale;
+        Color startColor = spriteRenderer.color;
+
+        float elapsedTime = 0f;
+
+        while (elapsedTime < burntRemovalAnimationTime)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / burntRemovalAnimationTime;
+
+            // 점점 작아지면서 투명해짐
+            transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
+            
+            // 색상 페이드 아웃
+            Color currentColor = Color.Lerp(startColor, Color.clear, t);
+            spriteRenderer.color = currentColor;
+
+            // 살짝 위로 올라가는 효과
+            transform.position = startPosition + Vector3.up * (t * 0.5f);
+
+            yield return null;
+        }
+
+        // 완전히 제거
+        CompleteBurntRemoval();
+    }
+
+    /// <summary>
+    /// 🔥 탄 호떡 제거 완료
+    /// </summary>
+    private void CompleteBurntRemoval()
+    {
+        Debug.Log("🔥 탄 호떡 제거 완료!");
+
+        // 그리들 슬롯 비우기
+        if (ownerGriddleSlot != null)
+        {
+            ownerGriddleSlot.MakeSlotEmpty();
+        }
+        else
+        {
+            Debug.LogError("ownerGriddleSlot이 지정되지 않았습니다!");
+        }
+
+        // 호떡 오브젝트 제거
+        Destroy(gameObject);
     }
 
     private void ShowDeliveryGuide()
@@ -618,17 +717,47 @@ public class HotteokOnGriddle : MonoBehaviour
 
     private void HandleBurnt()
     {
-        Debug.Log("타버렸습니다... ㅠㅠ");
+        Debug.Log("🔥 타버렸습니다... 클릭하여 제거하세요!");
         
+        // 모든 UI 숨기기
         if (pressGaugeSlider != null) pressGaugeSlider.gameObject.SetActive(false);
         if (cookingTimerUI != null) cookingTimerUI.SetActive(false);
         if (cookingProgressSlider != null) cookingProgressSlider.gameObject.SetActive(false);
         StopFlipIndicator();
 
+        // 탄 스프라이트 설정
         if (spriteRenderer != null && burntSprite != null)
         {
             spriteRenderer.sprite = burntSprite;
         }
+
+        // 🔥 탄 호떡임을 시각적으로 표시 (깜빡임 효과)
+        StartCoroutine(BurntBlinkEffect());
+    }
+
+    /// <summary>
+    /// 🔥 탄 호떡 깜빡임 효과 (클릭 가능함을 알림)
+    /// </summary>
+    IEnumerator BurntBlinkEffect()
+    {
+        if (spriteRenderer == null) yield break;
+
+        Color originalColor = spriteRenderer.color;
+        Color blinkColor = Color.red;
+
+        while (currentState == GriddleState.Burnt)
+        {
+            // 빨간색으로 깜빡임
+            spriteRenderer.color = Color.Lerp(originalColor, blinkColor, 0.7f);
+            yield return new WaitForSeconds(0.5f);
+
+            if (currentState != GriddleState.Burnt) break;
+
+            spriteRenderer.color = originalColor;
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        spriteRenderer.color = originalColor;
     }
 
     private void ShowCompletionEffect()
