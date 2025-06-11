@@ -1,5 +1,5 @@
 // Assets/Scripts/Customer/CustomerAnimator.cs
-// 손님의 스프라이트 애니메이션과 표정 변화를 관리하는 클래스
+// 손님의 스프라이트 애니메이션과 표정 변화를 관리하는 클래스 (StackOverflow 수정)
 
 using UnityEngine;
 using System.Collections;
@@ -28,6 +28,9 @@ public class CustomerAnimator : MonoBehaviour
     public float walkBobSpeed = 5f;                // 걸을 때 상하 움직임 속도
     public float walkBobAmount = 0.05f;            // 걸을 때 상하 움직임 크기
     
+    [Header("🐛 디버그")]
+    public bool enableAnimations = true;           // 애니메이션 활성화 여부
+    
     // 컴포넌트
     private SpriteRenderer spriteRenderer;
     private Vector3 originalPosition;
@@ -38,6 +41,7 @@ public class CustomerAnimator : MonoBehaviour
     private bool isWalking = false;
     private Coroutine currentAnimation;
     private Coroutine walkAnimation;
+    private Coroutine idleAnimation;               // 🔧 아이들 애니메이션 코루틴 분리
     
     void Awake()
     {
@@ -52,7 +56,10 @@ public class CustomerAnimator : MonoBehaviour
     void Start()
     {
         // 기본 표정 설정
-        ChangeExpression(neutralSprite);
+        if (enableAnimations)
+        {
+            ChangeExpression(neutralSprite);
+        }
     }
     
     /// <summary>
@@ -60,7 +67,7 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void ChangeExpression(Sprite newExpression, bool smooth = true)
     {
-        if (spriteRenderer == null || newExpression == null) return;
+        if (!enableAnimations || spriteRenderer == null || newExpression == null) return;
         
         if (smooth)
         {
@@ -77,6 +84,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     IEnumerator SmoothExpressionChange(Sprite newExpression)
     {
+        if (!enableAnimations) yield break;
+        
         // 페이드 아웃
         Color originalColor = spriteRenderer.color;
         float elapsedTime = 0f;
@@ -110,6 +119,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void PlayOrderingAnimation()
     {
+        if (!enableAnimations) return;
+        
         ChangeExpression(happySprite);
         PlayBounceAnimation();
     }
@@ -119,8 +130,9 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void PlayWaitingAnimation()
     {
+        if (!enableAnimations) return;
+        
         ChangeExpression(waitingSprite);
-        // 천천히 상하로 움직이는 대기 애니메이션
         StartIdleAnimation();
     }
     
@@ -129,6 +141,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void PlayWarningAnimation()
     {
+        if (!enableAnimations) return;
+        
         ChangeExpression(worriedSprite);
         PlayShakeAnimation();
     }
@@ -138,6 +152,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void PlaySatisfiedAnimation()
     {
+        if (!enableAnimations) return;
+        
         ChangeExpression(satisfiedSprite);
         PlayNodAnimation();
     }
@@ -147,6 +163,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void PlayAngryAnimation()
     {
+        if (!enableAnimations) return;
+        
         ChangeExpression(angrySprite);
         PlayAngryShakeAnimation();
     }
@@ -156,6 +174,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void PlayRejectAnimation()
     {
+        if (!enableAnimations) return;
+        
         ChangeExpression(angrySprite);
         PlayShakeAnimation();
     }
@@ -165,6 +185,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void PlayConfusedAnimation()
     {
+        if (!enableAnimations) return;
+        
         ChangeExpression(confusedSprite);
         PlayTiltAnimation();
     }
@@ -174,7 +196,7 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public void StartWalking()
     {
-        if (isWalking) return;
+        if (!enableAnimations || isWalking) return;
         
         isWalking = true;
         if (walkAnimation != null)
@@ -205,6 +227,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     void PlayBounceAnimation()
     {
+        if (!enableAnimations) return;
+        
         if (currentAnimation != null)
         {
             StopCoroutine(currentAnimation);
@@ -217,6 +241,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     void PlayShakeAnimation()
     {
+        if (!enableAnimations) return;
+        
         if (currentAnimation != null)
         {
             StopCoroutine(currentAnimation);
@@ -229,6 +255,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     void PlayAngryShakeAnimation()
     {
+        if (!enableAnimations) return;
+        
         if (currentAnimation != null)
         {
             StopCoroutine(currentAnimation);
@@ -241,6 +269,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     void PlayNodAnimation()
     {
+        if (!enableAnimations) return;
+        
         if (currentAnimation != null)
         {
             StopCoroutine(currentAnimation);
@@ -253,6 +283,8 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     void PlayTiltAnimation()
     {
+        if (!enableAnimations) return;
+        
         if (currentAnimation != null)
         {
             StopCoroutine(currentAnimation);
@@ -261,15 +293,20 @@ public class CustomerAnimator : MonoBehaviour
     }
     
     /// <summary>
-    /// 대기 중 아이들 애니메이션
+    /// 🔧 대기 중 아이들 애니메이션 (수정됨)
     /// </summary>
     void StartIdleAnimation()
     {
-        if (currentAnimation != null)
+        if (!enableAnimations) return;
+        
+        // 기존 아이들 애니메이션 중지
+        if (idleAnimation != null)
         {
-            StopCoroutine(currentAnimation);
+            StopCoroutine(idleAnimation);
         }
-        currentAnimation = StartCoroutine(IdleAnimation());
+        
+        // 새로운 아이들 애니메이션 시작
+        idleAnimation = StartCoroutine(IdleAnimation());
     }
     
     /// <summary>
@@ -277,7 +314,7 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     IEnumerator WalkingAnimation()
     {
-        while (isWalking)
+        while (isWalking && enableAnimations)
         {
             float bobOffset = Mathf.Sin(Time.time * walkBobSpeed) * walkBobAmount;
             transform.localPosition = originalPosition + Vector3.up * bobOffset;
@@ -293,7 +330,7 @@ public class CustomerAnimator : MonoBehaviour
         Vector3 startPos = transform.localPosition;
         float elapsedTime = 0f;
         
-        while (elapsedTime < bounceDuration)
+        while (elapsedTime < bounceDuration && enableAnimations)
         {
             elapsedTime += Time.deltaTime;
             float t = elapsedTime / bounceDuration;
@@ -317,7 +354,7 @@ public class CustomerAnimator : MonoBehaviour
         Vector3 startPos = transform.localPosition;
         float elapsedTime = 0f;
         
-        while (elapsedTime < shakeDuration)
+        while (elapsedTime < shakeDuration && enableAnimations)
         {
             elapsedTime += Time.deltaTime;
             float t = elapsedTime / shakeDuration;
@@ -343,7 +380,7 @@ public class CustomerAnimator : MonoBehaviour
         float angryShakeDuration = shakeDuration * 1.5f;
         float angryShakeIntensity = shakeIntensity * 2f;
         
-        while (elapsedTime < angryShakeDuration)
+        while (elapsedTime < angryShakeDuration && enableAnimations)
         {
             elapsedTime += Time.deltaTime;
             float t = elapsedTime / angryShakeDuration;
@@ -369,11 +406,11 @@ public class CustomerAnimator : MonoBehaviour
         float elapsedTime = 0f;
         
         // 2번 끄덕이기
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 2 && enableAnimations; i++)
         {
             // 아래로
             elapsedTime = 0f;
-            while (elapsedTime < nodDuration * 0.25f)
+            while (elapsedTime < nodDuration * 0.25f && enableAnimations)
             {
                 elapsedTime += Time.deltaTime;
                 float t = elapsedTime / (nodDuration * 0.25f);
@@ -384,7 +421,7 @@ public class CustomerAnimator : MonoBehaviour
             
             // 위로
             elapsedTime = 0f;
-            while (elapsedTime < nodDuration * 0.25f)
+            while (elapsedTime < nodDuration * 0.25f && enableAnimations)
             {
                 elapsedTime += Time.deltaTime;
                 float t = elapsedTime / (nodDuration * 0.25f);
@@ -409,7 +446,7 @@ public class CustomerAnimator : MonoBehaviour
         float elapsedTime = 0f;
         
         // 오른쪽으로 기울이기
-        while (elapsedTime < tiltDuration * 0.5f)
+        while (elapsedTime < tiltDuration * 0.5f && enableAnimations)
         {
             elapsedTime += Time.deltaTime;
             float t = elapsedTime / (tiltDuration * 0.5f);
@@ -420,7 +457,7 @@ public class CustomerAnimator : MonoBehaviour
         
         // 원래대로
         elapsedTime = 0f;
-        while (elapsedTime < tiltDuration * 0.5f)
+        while (elapsedTime < tiltDuration * 0.5f && enableAnimations)
         {
             elapsedTime += Time.deltaTime;
             float t = elapsedTime / (tiltDuration * 0.5f);
@@ -434,7 +471,7 @@ public class CustomerAnimator : MonoBehaviour
     }
     
     /// <summary>
-    /// 대기 중 아이들 애니메이션 구현
+    /// 🔧 대기 중 아이들 애니메이션 구현 (수정됨 - StackOverflow 방지)
     /// </summary>
     IEnumerator IdleAnimation()
     {
@@ -442,12 +479,16 @@ public class CustomerAnimator : MonoBehaviour
         float idleSpeed = 1f;
         float idleAmount = 0.02f;
         
-        while (currentAnimation == StartCoroutine(IdleAnimation())) // 무한 루프
+        // 🔧 무한 루프 조건 수정: 간단하고 안전한 방식
+        while (enableAnimations && gameObject != null && gameObject.activeInHierarchy)
         {
             float idleOffset = Mathf.Sin(Time.time * idleSpeed) * idleAmount;
             transform.localPosition = startPos + Vector3.up * idleOffset;
             yield return null;
         }
+        
+        // 정리
+        idleAnimation = null;
     }
     
     /// <summary>
@@ -462,6 +503,12 @@ public class CustomerAnimator : MonoBehaviour
             currentAnimation = null;
         }
         
+        if (idleAnimation != null)
+        {
+            StopCoroutine(idleAnimation);
+            idleAnimation = null;
+        }
+        
         StopWalking();
         
         // 위치 및 회전 초기화
@@ -470,7 +517,10 @@ public class CustomerAnimator : MonoBehaviour
         transform.localRotation = originalRotation;
         
         // 기본 표정으로 복귀
-        ChangeExpression(neutralSprite, false);
+        if (enableAnimations)
+        {
+            ChangeExpression(neutralSprite, false);
+        }
     }
     
     /// <summary>
@@ -478,6 +528,19 @@ public class CustomerAnimator : MonoBehaviour
     /// </summary>
     public bool IsAnimating()
     {
-        return currentAnimation != null || walkAnimation != null;
+        return currentAnimation != null || walkAnimation != null || idleAnimation != null;
+    }
+    
+    /// <summary>
+    /// 애니메이션 활성화/비활성화
+    /// </summary>
+    public void SetAnimationsEnabled(bool enabled)
+    {
+        enableAnimations = enabled;
+        
+        if (!enabled)
+        {
+            ResetToDefault();
+        }
     }
 }

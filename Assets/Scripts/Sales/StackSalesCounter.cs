@@ -1,5 +1,5 @@
 // Assets/Scripts/StackSalesCounter.cs
-// 상단 판매대 스택 관리 시스템
+// 상단 판매대 스택 관리 시스템 (완전한 수정 버전)
 
 using UnityEngine;
 using System.Collections.Generic;
@@ -333,7 +333,7 @@ public class StackSalesCounter : MonoBehaviour
     }
     
     /// <summary>
-    /// 호떡 선택 (탭했을 때)
+    /// 🔧 호떡 선택 (탭했을 때) - 수정된 버전
     /// </summary>
     public void SelectHotteok(GameObject hotteokObject)
     {
@@ -345,36 +345,46 @@ public class StackSalesCounter : MonoBehaviour
         
         selectedHotteok = hotteokObject;
         
-        // 선택 표시
+        // 🔧 선택 표시: 색상 변경만 (위치 변경 금지)
         SpriteRenderer sr = selectedHotteok.GetComponent<SpriteRenderer>();
         if (sr != null)
         {
             sr.color = selectedColor;
         }
         
-        // 선택 표시 UI 활성화
+        // 🔧 선택 표시 UI 활성화 (위치는 호떡 위에 고정)
         if (selectionIndicator != null)
         {
             selectionIndicator.SetActive(true);
-            selectionIndicator.transform.position = hotteokObject.transform.position + Vector3.up * 0.5f;
+            Vector3 indicatorPosition = hotteokObject.transform.position + Vector3.up * 0.5f;
+            selectionIndicator.transform.position = indicatorPosition;
+            
+            // 🔧 indicator의 위치만 변경하고 호떡 자체는 움직이지 않음
+            Debug.Log($"🎯 선택 표시 위치: {indicatorPosition}");
         }
         
-        Debug.Log("호떡 선택됨: " + hotteokObject.GetComponent<HotteokInStack>().fillingType);
+        HotteokInStack hotteokScript = hotteokObject.GetComponent<HotteokInStack>();
+        if (hotteokScript != null)
+        {
+            Debug.Log($"✅ 호떡 선택됨: {hotteokScript.fillingType}");
+        }
     }
     
     /// <summary>
-    /// 호떡 선택 해제
+    /// 🔧 호떡 선택 해제 - 수정된 버전
     /// </summary>
     public void DeselectHotteok()
     {
         if (selectedHotteok != null)
         {
+            // 🔧 색상만 원래대로 복원 (위치는 건드리지 않음)
             SpriteRenderer sr = selectedHotteok.GetComponent<SpriteRenderer>();
             if (sr != null)
             {
                 sr.color = Color.white;
             }
             
+            Debug.Log($"🔄 호떡 선택 해제됨");
             selectedHotteok = null;
         }
         
@@ -385,55 +395,104 @@ public class StackSalesCounter : MonoBehaviour
     }
     
     /// <summary>
-    /// 선택된 호떡을 손님에게 전달
+    /// 🔧 선택된 호떡을 손님에게 전달 - 수정된 버전
     /// </summary>
     public bool DeliverSelectedHotteokToCustomer()
     {
         if (selectedHotteok == null)
         {
-            Debug.Log("선택된 호떡이 없습니다!");
+            Debug.Log("❌ 선택된 호떡이 없습니다!");
             return false;
         }
         
         HotteokInStack stackScript = selectedHotteok.GetComponent<HotteokInStack>();
         if (stackScript == null)
         {
-            Debug.LogError("HotteokInStack 스크립트를 찾을 수 없습니다!");
+            Debug.LogError("❌ HotteokInStack 스크립트를 찾을 수 없습니다!");
             return false;
         }
         
         PreparationUI.FillingType fillingType = stackScript.fillingType;
         
-        // 스택에서 호떡 제거 (LIFO: 맨 위부터)
+        Debug.Log($"📦 호떡 전달 시작: {fillingType}");
+        
+        // 🔧 스택에서 호떡 제거 (LIFO: 맨 위부터)
         List<GameObject> stack = hotteokStacks[fillingType];
         if (stack.Contains(selectedHotteok))
         {
-            stack.Remove(selectedHotteok);
-            
-            Debug.Log(fillingType + " 호떡이 손님에게 전달됨! 남은 스택 높이: " + stack.Count);
-            
-            // 선택 해제
-            DeselectHotteok();
-            
-            // 호떡 오브젝트 제거
-            Destroy(selectedHotteok);
-            
-            // 남은 호떡들의 인덱스 업데이트 및 재정렬
-            StartCoroutine(ReorganizeStack(fillingType));
+            // 🔧 전달 애니메이션 시작 (선택적)
+            StartCoroutine(DeliveryAnimation(selectedHotteok, fillingType));
             
             return true;
         }
-        
-        return false;
+        else
+        {
+            Debug.LogError($"❌ 선택된 호떡이 {fillingType} 스택에 없습니다!");
+            return false;
+        }
     }
     
     /// <summary>
-    /// 스택 재정렬 (호떡 제거 후)
+    /// 🆕 호떡 전달 애니메이션 (스택에서 제거 포함)
+    /// </summary>
+    IEnumerator DeliveryAnimation(GameObject hotteokObject, PreparationUI.FillingType fillingType)
+    {
+        // 🔧 즉시 스택에서 제거 (게임 로직상)
+        List<GameObject> stack = hotteokStacks[fillingType];
+        stack.Remove(hotteokObject);
+        
+        Debug.Log($"✅ {fillingType} 호떡이 스택에서 제거됨! 남은 스택 높이: {stack.Count}");
+        
+        // 🔧 전달 중에는 클릭 불가능하게
+        Collider2D collider = hotteokObject.GetComponent<Collider2D>();
+        if (collider != null)
+        {
+            collider.enabled = false;
+        }
+        
+        // 🔧 선택 해제
+        DeselectHotteok();
+        
+        // 🔧 간단한 전달 애니메이션 (페이드 아웃)
+        SpriteRenderer sr = hotteokObject.GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            Color originalColor = sr.color;
+            float duration = 0.5f;
+            float elapsedTime = 0f;
+            
+            while (elapsedTime < duration)
+            {
+                elapsedTime += Time.deltaTime;
+                float alpha = 1f - (elapsedTime / duration);
+                sr.color = new Color(originalColor.r, originalColor.g, originalColor.b, alpha);
+                yield return null;
+            }
+        }
+        
+        // 🔧 호떡 오브젝트 완전 제거
+        Debug.Log($"🗑️ 호떡 오브젝트 제거: {hotteokObject.name}");
+        Destroy(hotteokObject);
+        
+        // 🔧 남은 호떡들의 인덱스 업데이트 및 재정렬
+        StartCoroutine(ReorganizeStack(fillingType));
+    }
+    
+    /// <summary>
+    /// 스택 재정렬 (호떡 제거 후) - 기존 메서드 개선
     /// </summary>
     IEnumerator ReorganizeStack(PreparationUI.FillingType fillingType)
     {
         List<GameObject> stack = hotteokStacks[fillingType];
         RectTransform baseSlot = stackSlotsByType[fillingType];
+        
+        if (stack.Count == 0)
+        {
+            Debug.Log($"📦 {fillingType} 스택이 비어있음 - 재정렬 불필요");
+            yield break;
+        }
+        
+        Debug.Log($"🔄 {fillingType} 스택 재정렬 시작 (남은 호떡: {stack.Count}개)");
         
         // 각 호떡을 새로운 위치로 이동
         for (int i = 0; i < stack.Count; i++)
@@ -471,16 +530,71 @@ public class StackSalesCounter : MonoBehaviour
                 stackScript.UpdateStackIndex(i);
             }
         }
+        
+        Debug.Log($"✅ {fillingType} 스택 재정렬 완료");
+    }
+    
+    /// <summary>
+    /// 🔧 현재 선택된 호떡 반환 (수정된 버전)
+    /// </summary>
+    public GameObject GetSelectedHotteok()
+    {
+        if (selectedHotteok != null)
+        {
+            // 🔧 선택된 호떡이 여전히 유효한지 확인
+            HotteokInStack stackScript = selectedHotteok.GetComponent<HotteokInStack>();
+            if (stackScript != null)
+            {
+                return selectedHotteok;
+            }
+            else
+            {
+                // 🔧 유효하지 않은 선택 해제
+                Debug.LogWarning("⚠️ 선택된 호떡이 유효하지 않음 - 자동 해제");
+                DeselectHotteok();
+                return null;
+            }
+        }
+        return null;
     }
     
     /// <summary>
     /// 현재 스택 상태 정보 반환 (디버깅용)
     /// </summary>
+    [ContextMenu("Debug Stack Status")]
     public void LogStackStatus()
     {
+        Debug.Log("=== StackSalesCounter Debug Info ===");
+        
         foreach (var kvp in hotteokStacks)
         {
-            Debug.Log(kvp.Key + " 스택: " + kvp.Value.Count + "/" + maxStackHeight);
+            PreparationUI.FillingType type = kvp.Key;
+            List<GameObject> stack = kvp.Value;
+            
+            Debug.Log($"{type} 스택: {stack.Count}/{maxStackHeight}");
+            
+            for (int i = 0; i < stack.Count; i++)
+            {
+                if (stack[i] != null)
+                {
+                    Vector3 pos = stack[i].transform.position;
+                    bool isSelected = (stack[i] == selectedHotteok);
+                    Debug.Log($"  [{i}] {stack[i].name} at {pos} {(isSelected ? "(선택됨)" : "")}");
+                }
+                else
+                {
+                    Debug.Log($"  [{i}] NULL");
+                }
+            }
+        }
+        
+        if (selectedHotteok != null)
+        {
+            Debug.Log($"현재 선택: {selectedHotteok.name}");
+        }
+        else
+        {
+            Debug.Log("현재 선택: 없음");
         }
     }
     
@@ -491,13 +605,5 @@ public class StackSalesCounter : MonoBehaviour
     {
         if (!hotteokStacks.ContainsKey(fillingType)) return 0;
         return hotteokStacks[fillingType].Count;
-    }
-    
-    /// <summary>
-    /// 현재 선택된 호떡 반환
-    /// </summary>
-    public GameObject GetSelectedHotteok()
-    {
-        return selectedHotteok;
     }
 }

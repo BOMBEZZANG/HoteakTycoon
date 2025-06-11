@@ -1,9 +1,10 @@
 // Assets/Scripts/Customer/CustomerUI.cs
-// 손님의 말풍선, 아이콘, 피드백 등 UI를 관리하는 클래스
+// 손님의 말풍선, 주문 표시 등 UI를 관리하는 클래스 (다중 주문 지원)
 
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 
 public class CustomerUI : MonoBehaviour
@@ -12,10 +13,9 @@ public class CustomerUI : MonoBehaviour
     public Canvas worldCanvas;                  // World Space Canvas
     public GameObject uiContainer;              // 모든 UI의 부모
     
-    [Header("주문 말풍선")]
+    [Header("📝 주문 표시 (간단 버전)")]
     public GameObject orderBubble;              // 주문 말풍선 전체
-    public Image orderHotteokIcon;              // 주문한 호떡 아이콘
-    public TextMeshProUGUI orderQuantityText;  // 주문 개수 텍스트
+    public TextMeshProUGUI orderText;          // 주문 텍스트 (간단 표시)
     public Image bubbleBackground;              // 말풍선 배경
     
     [Header("진행 상태")]
@@ -35,9 +35,10 @@ public class CustomerUI : MonoBehaviour
     public TextMeshProUGUI feedbackText;       // 피드백 텍스트
     public float feedbackDisplayTime = 2.0f;   // 피드백 표시 시간
     
-    [Header("호떡 아이콘 스프라이트")]
-    public Sprite sugarHotteokSprite;          // 설탕 호떡 아이콘
-    public Sprite seedHotteokSprite;           // 씨앗 호떡 아이콘
+    [Header("🎨 주문 표시 스타일")]
+    public Color orderTextColor = Color.black;             // 주문 텍스트 색상
+    public Color completedTextColor = Color.green;         // 완료된 항목 색상
+    public float orderTextSize = 14f;                      // 주문 텍스트 크기
     
     [Header("애니메이션 설정")]
     public float bubblePopDuration = 0.3f;     // 말풍선 팝업 시간
@@ -48,10 +49,14 @@ public class CustomerUI : MonoBehaviour
         new Keyframe(1f, 1f, 0f, 0f)
     ); // EaseOutBack 효과를 흉내낸 커브
     
+    [Header("🐛 디버그")]
+    public bool enableUI = true;               // UI 활성화 여부
+    
     // 내부 상태
     private bool isInitialized = false;
     private Coroutine feedbackCoroutine;
     private Coroutine warningPulseCoroutine;
+    private List<Customer.OrderItem> currentOrder = new List<Customer.OrderItem>();
     
     void Awake()
     {
@@ -72,7 +77,7 @@ public class CustomerUI : MonoBehaviour
     void LateUpdate()
     {
         // UI가 항상 카메라를 향하도록
-        if (worldCanvas != null && Camera.main != null)
+        if (enableUI && worldCanvas != null && Camera.main != null)
         {
             worldCanvas.transform.LookAt(Camera.main.transform);
             worldCanvas.transform.Rotate(0, 180, 0); // 뒤집힌 상태 보정
@@ -96,6 +101,13 @@ public class CustomerUI : MonoBehaviour
             progressFillImage.color = normalProgressColor;
         }
         
+        // 주문 텍스트 초기화
+        if (orderText != null)
+        {
+            orderText.color = orderTextColor;
+            orderText.fontSize = orderTextSize;
+        }
+        
         isInitialized = true;
     }
     
@@ -104,6 +116,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     void CreateWorldCanvas()
     {
+        if (!enableUI) return;
+        
         GameObject canvasObj = new GameObject("CustomerUI_Canvas");
         canvasObj.transform.SetParent(transform);
         canvasObj.transform.localPosition = Vector3.up * 1.5f; // 손님 머리 위
@@ -118,7 +132,7 @@ public class CustomerUI : MonoBehaviour
         
         // RectTransform 설정
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(200, 150); // 적당한 크기
+        canvasRect.sizeDelta = new Vector2(300, 200); // 더 큰 크기로 설정
         canvasRect.localScale = Vector3.one * 0.01f;  // 월드 스케일 조정
         
         // UI 컨테이너 설정
@@ -126,33 +140,109 @@ public class CustomerUI : MonoBehaviour
         {
             uiContainer = canvasObj;
         }
+        
+        Debug.Log("📋 CustomerUI Canvas 자동 생성됨");
     }
     
     /// <summary>
-    /// 주문 말풍선 표시
+    /// 📝 주문 말풍선 표시 (다중 주문 지원)
     /// </summary>
-    public void ShowOrderBubble(PreparationUI.FillingType orderType, int quantity = 1)
+    public void ShowOrderBubble(List<Customer.OrderItem> orderItems)
     {
-        if (!isInitialized) return;
+        if (!enableUI || !isInitialized || orderItems == null || orderItems.Count == 0) return;
         
-        Debug.Log($"📋 주문 말풍선 표시: {orderType} x{quantity}");
+        currentOrder = new List<Customer.OrderItem>(orderItems);
         
-        // 주문 아이콘 설정
-        if (orderHotteokIcon != null)
+        // 주문 텍스트 생성
+        string orderDisplayText = GenerateOrderDisplayText(orderItems);
+        
+        Debug.Log($"📋 주문 말풍선 표시: {orderDisplayText}");
+        
+        // 주문 텍스트 설정
+        if (orderText != null)
         {
-            orderHotteokIcon.sprite = GetHotteokSprite(orderType);
-        }
-        
-        // 주문 개수 설정
-        if (orderQuantityText != null)
-        {
-            orderQuantityText.text = quantity > 1 ? $"x{quantity}" : "";
+            orderText.text = orderDisplayText;
         }
         
         // 말풍선 활성화 및 애니메이션
         if (orderBubble != null)
         {
             orderBubble.SetActive(true);
+            StartCoroutine(BubblePopAnimation(orderBubble));
+        }
+    }
+    
+    /// <summary>
+    /// 📝 주문 표시 텍스트 생성
+    /// </summary>
+    string GenerateOrderDisplayText(List<Customer.OrderItem> orderItems)
+    {
+        if (orderItems == null || orderItems.Count == 0) return "주문 없음";
+        
+        string displayText = "주문:\n";
+        
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            Customer.OrderItem item = orderItems[i];
+            string itemName = GetHotteokName(item.fillingType);
+            
+            // 완료 상태에 따른 표시
+            if (item.IsCompleted())
+            {
+                displayText += $"✅ {itemName} {item.quantity}개";
+            }
+            else
+            {
+                displayText += $"🔲 {itemName} {item.quantity}개";
+            }
+            
+            // 진행 상황 표시
+            if (item.receivedQuantity > 0)
+            {
+                displayText += $" ({item.receivedQuantity}/{item.quantity})";
+            }
+            
+            if (i < orderItems.Count - 1)
+            {
+                displayText += "\n";
+            }
+        }
+        
+        return displayText;
+    }
+    
+    /// <summary>
+    /// 📝 주문 진행 상황 업데이트
+    /// </summary>
+    public void UpdateOrderProgress(List<Customer.OrderItem> orderItems)
+    {
+        if (!enableUI || orderItems == null) return;
+        
+        currentOrder = new List<Customer.OrderItem>(orderItems);
+        
+        // 주문 텍스트 업데이트
+        string updatedText = GenerateOrderDisplayText(orderItems);
+        
+        if (orderText != null)
+        {
+            orderText.text = updatedText;
+        }
+        
+        Debug.Log($"📋 주문 진행 상황 업데이트: {updatedText}");
+    }
+    
+    /// <summary>
+    /// 📝 부분 완료 피드백
+    /// </summary>
+    public void ShowPartialCompletionFeedback(string message)
+    {
+        if (!enableUI) return;
+        
+        ShowFeedbackText(message, Color.green);
+        
+        // 살짝 바운스 효과
+        if (orderBubble != null)
+        {
             StartCoroutine(BubblePopAnimation(orderBubble));
         }
     }
@@ -173,6 +263,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     public void UpdateWaitProgress(float progress)
     {
+        if (!enableUI) return;
+        
         if (waitProgressSlider != null)
         {
             waitProgressSlider.value = progress;
@@ -211,6 +303,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     public void ShowWarningIcon()
     {
+        if (!enableUI) return;
+        
         if (warningIcon != null)
         {
             warningIcon.SetActive(true);
@@ -246,13 +340,15 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     public void ShowSatisfactionEffect()
     {
+        if (!enableUI) return;
+        
         if (satisfactionIcon != null)
         {
             satisfactionIcon.SetActive(true);
             StartCoroutine(SatisfactionAnimation());
         }
         
-        ShowFeedbackText("고마워요! ❤️", Color.green);
+        ShowFeedbackText("고마워요! 🎉", Color.green);
     }
     
     /// <summary>
@@ -260,6 +356,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     public void ShowAngryEffect()
     {
+        if (!enableUI) return;
+        
         if (angryIcon != null)
         {
             angryIcon.SetActive(true);
@@ -274,6 +372,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     public void ShowWrongOrderFeedback()
     {
+        if (!enableUI) return;
+        
         ShowFeedbackText("이건 제가 주문한 게 아니에요! 😕", Color.green);
         
         // 말풍선 흔들기 효과
@@ -288,6 +388,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     public void ShowNoSelectionFeedback()
     {
+        if (!enableUI) return;
+        
         ShowFeedbackText("호떡을 선택해주세요! 🤔", Color.blue);
     }
     
@@ -296,6 +398,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     void ShowFeedbackText(string text, Color color)
     {
+        if (!enableUI) return;
+        
         if (feedbackText != null)
         {
             feedbackText.text = text;
@@ -329,26 +433,30 @@ public class CustomerUI : MonoBehaviour
     }
     
     /// <summary>
-    /// 호떡 타입에 따른 스프라이트 반환
+    /// 호떡 타입에 따른 이름 반환
     /// </summary>
-    Sprite GetHotteokSprite(PreparationUI.FillingType type)
+    string GetHotteokName(PreparationUI.FillingType type)
     {
         switch (type)
         {
             case PreparationUI.FillingType.Sugar:
-                return sugarHotteokSprite;
+                return "설탕 호떡";
             case PreparationUI.FillingType.Seed:
-                return seedHotteokSprite;
+                return "씨앗 호떡";
             default:
-                return null;
+                return "알 수 없는 호떡";
         }
     }
+    
+    // ============= 애니메이션 코루틴들 =============
     
     /// <summary>
     /// 말풍선 팝업 애니메이션
     /// </summary>
     IEnumerator BubblePopAnimation(GameObject target)
     {
+        if (!enableUI || target == null) yield break;
+        
         Vector3 originalScale = target.transform.localScale;
         target.transform.localScale = Vector3.zero;
         
@@ -372,6 +480,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     IEnumerator PulseAnimation(GameObject target)
     {
+        if (!enableUI || target == null) yield break;
+        
         Vector3 originalScale = target.transform.localScale;
         
         while (target.activeInHierarchy)
@@ -403,6 +513,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     IEnumerator SatisfactionAnimation()
     {
+        if (!enableUI || satisfactionIcon == null) yield break;
+        
         Vector3 originalPos = satisfactionIcon.transform.localPosition;
         Vector3 originalScale = satisfactionIcon.transform.localScale;
         
@@ -441,6 +553,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     IEnumerator AngryAnimation()
     {
+        if (!enableUI || angryIcon == null) yield break;
+        
         float duration = 0.8f;
         float elapsedTime = 0f;
         
@@ -465,6 +579,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     IEnumerator ShakeAnimation(GameObject target)
     {
+        if (!enableUI || target == null) yield break;
+        
         Vector3 originalPos = target.transform.localPosition;
         float duration = 0.5f;
         float elapsedTime = 0f;
@@ -488,6 +604,8 @@ public class CustomerUI : MonoBehaviour
     /// </summary>
     IEnumerator FeedbackTextAnimation()
     {
+        if (!enableUI || feedbackTextObject == null) yield break;
+        
         // 페이드 인
         CanvasGroup canvasGroup = feedbackTextObject.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
@@ -524,5 +642,18 @@ public class CustomerUI : MonoBehaviour
         
         canvasGroup.alpha = 0f;
         feedbackTextObject.SetActive(false);
+    }
+    
+    /// <summary>
+    /// UI 활성화/비활성화
+    /// </summary>
+    public void SetUIEnabled(bool enabled)
+    {
+        enableUI = enabled;
+        
+        if (!enabled)
+        {
+            HideAllUI();
+        }
     }
 }

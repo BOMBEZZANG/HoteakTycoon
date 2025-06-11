@@ -1,8 +1,9 @@
 // Assets/Scripts/Customer/Customer.cs
-// 개별 손님의 상태 및 행동을 관리하는 핵심 클래스
+// 개별 손님의 상태 및 행동을 관리하는 핵심 클래스 (다중 주문 시스템)
 
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Customer : MonoBehaviour
 {
@@ -17,13 +18,46 @@ public class Customer : MonoBehaviour
         Exiting         // 퇴장 중
     }
     
+    /// <summary>
+    /// 📝 주문 항목 클래스
+    /// </summary>
+    [System.Serializable]
+    public class OrderItem
+    {
+        public PreparationUI.FillingType fillingType;
+        public int quantity;
+        public int receivedQuantity;  // 받은 개수
+        
+        public OrderItem(PreparationUI.FillingType type, int qty)
+        {
+            fillingType = type;
+            quantity = qty;
+            receivedQuantity = 0;
+        }
+        
+        public bool IsCompleted()
+        {
+            return receivedQuantity >= quantity;
+        }
+        
+        public int GetRemainingQuantity()
+        {
+            return quantity - receivedQuantity;
+        }
+    }
+    
     [Header("손님 기본 정보")]
     public int customerID;
     public string customerName = "손님";
     
-    [Header("주문 정보")]
-    public PreparationUI.FillingType orderedType;
-    public int orderedQuantity = 1; // 주문 개수 (확장 가능)
+    [Header("🎨 랜덤 스프라이트 시스템")]
+    public Sprite[] customerSprites;        // 손님 이미지 3개 배열
+    public int selectedSpriteIndex = -1;    // 선택된 스프라이트 인덱스 (-1이면 랜덤)
+    
+    [Header("📝 주문 정보")]
+    public List<OrderItem> orderItems = new List<OrderItem>();  // 주문 항목 리스트
+    public int maxTotalQuantity = 3;        // 최대 총 주문 개수
+    public int minTotalQuantity = 1;        // 최소 총 주문 개수
     
     [Header("타이밍 설정")]
     public float enterDuration = 2.0f;         // 들어오는 시간
@@ -40,13 +74,14 @@ public class Customer : MonoBehaviour
     public float angryWalkSpeed = 4.0f;        // 화났을 때 걷기 속도
     
     [Header("점수 및 보상")]
-    public int satisfactionReward = 100;       // 만족 시 점수
+    public int satisfactionRewardPerItem = 50; // 항목당 만족 점수
     public int angryPenalty = -50;             // 화남 시 감점
+    public int bonusForCompleteOrder = 50;     // 전체 주문 완료 보너스
     
     // 내부 상태
     private CustomerState currentState = CustomerState.Entering;
     private float currentWaitTime = 0f;
-    private bool hasReceivedOrder = false;
+    private bool hasReceivedCompleteOrder = false;
     private CustomerUI customerUI;
     private CustomerAnimator customerAnimator;
     private CustomerSpawner parentSpawner;
@@ -67,6 +102,199 @@ public class Customer : MonoBehaviour
         {
             customerCollider.enabled = false; // 들어올 때는 클릭 불가
         }
+        
+        // 🎨 랜덤 스프라이트 선택
+        SelectRandomSprite();
+    }
+    
+    /// <summary>
+    /// 🎨 랜덤 스프라이트 선택 및 적용
+    /// </summary>
+    void SelectRandomSprite()
+    {
+        if (customerSprites == null || customerSprites.Length == 0)
+        {
+            Debug.LogWarning("⚠️ customerSprites 배열이 비어있습니다! Inspector에서 손님 이미지를 설정해주세요.");
+            return;
+        }
+        
+        // selectedSpriteIndex가 -1이면 랜덤 선택
+        if (selectedSpriteIndex == -1)
+        {
+            selectedSpriteIndex = Random.Range(0, customerSprites.Length);
+        }
+        
+        // 인덱스 범위 확인
+        if (selectedSpriteIndex >= 0 && selectedSpriteIndex < customerSprites.Length)
+        {
+            if (spriteRenderer != null && customerSprites[selectedSpriteIndex] != null)
+            {
+                spriteRenderer.sprite = customerSprites[selectedSpriteIndex];
+                Debug.Log($"🎨 손님 {customerID}: 스프라이트 [{selectedSpriteIndex}] 적용됨");
+            }
+            else
+            {
+                Debug.LogError($"❌ 스프라이트 또는 SpriteRenderer가 null입니다! 인덱스: {selectedSpriteIndex}");
+            }
+        }
+        else
+        {
+            Debug.LogError($"❌ 잘못된 스프라이트 인덱스: {selectedSpriteIndex} (배열 크기: {customerSprites.Length})");
+        }
+    }
+    
+    /// <summary>
+    /// 📝 랜덤 주문 생성
+    /// </summary>
+    void GenerateRandomOrder()
+    {
+        orderItems.Clear();
+        
+        // 총 주문 개수 랜덤 결정
+        int totalQuantity = Random.Range(minTotalQuantity, maxTotalQuantity + 1);
+        
+        // 사용 가능한 호떡 타입
+        PreparationUI.FillingType[] availableTypes = {
+            PreparationUI.FillingType.Sugar,
+            PreparationUI.FillingType.Seed
+        };
+        
+        // 랜덤하게 주문 생성
+        int remainingQuantity = totalQuantity;
+        
+        while (remainingQuantity > 0)
+        {
+            // 랜덤 타입 선택
+            PreparationUI.FillingType randomType = availableTypes[Random.Range(0, availableTypes.Length)];
+            
+            // 이미 해당 타입이 주문에 있는지 확인
+            OrderItem existingItem = orderItems.Find(item => item.fillingType == randomType);
+            
+            if (existingItem != null)
+            {
+                // 기존 항목에 추가 (최대 3개까지)
+                int addQuantity = Mathf.Min(Random.Range(1, remainingQuantity + 1), 3 - existingItem.quantity);
+                existingItem.quantity += addQuantity;
+                remainingQuantity -= addQuantity;
+            }
+            else
+            {
+                // 새로운 항목 추가
+                int quantity = Mathf.Min(Random.Range(1, remainingQuantity + 1), remainingQuantity);
+                orderItems.Add(new OrderItem(randomType, quantity));
+                remainingQuantity -= quantity;
+            }
+            
+            // 무한 루프 방지
+            if (orderItems.Count >= availableTypes.Length)
+            {
+                // 마지막 항목에 남은 수량 모두 추가
+                if (remainingQuantity > 0 && orderItems.Count > 0)
+                {
+                    orderItems[orderItems.Count - 1].quantity += remainingQuantity;
+                    remainingQuantity = 0;
+                }
+                break;
+            }
+        }
+        
+        // 디버그 출력
+        Debug.Log($"📝 {customerName} 주문 생성: {GetOrderSummary()}");
+    }
+    
+    /// <summary>
+    /// 📝 주문 요약 텍스트 생성
+    /// </summary>
+    public string GetOrderSummary()
+    {
+        if (orderItems.Count == 0) return "주문 없음";
+        
+        string summary = "";
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            OrderItem item = orderItems[i];
+            string itemName = GetHotteokName(item.fillingType);
+            summary += $"{itemName} {item.quantity}개";
+            
+            if (i < orderItems.Count - 1)
+            {
+                summary += ", ";
+            }
+        }
+        return summary;
+    }
+    
+    /// <summary>
+    /// 📝 주문 진행 상황 텍스트 생성
+    /// </summary>
+    public string GetOrderProgress()
+    {
+        if (orderItems.Count == 0) return "주문 없음";
+        
+        string progress = "";
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            OrderItem item = orderItems[i];
+            string itemName = GetHotteokName(item.fillingType);
+            progress += $"{itemName} {item.receivedQuantity}/{item.quantity}";
+            
+            if (i < orderItems.Count - 1)
+            {
+                progress += ", ";
+            }
+        }
+        return progress;
+    }
+    
+    /// <summary>
+    /// 📝 전체 주문이 완료되었는지 확인
+    /// </summary>
+    public bool IsOrderComplete()
+    {
+        if (orderItems.Count == 0) return false;
+        
+        foreach (OrderItem item in orderItems)
+        {
+            if (!item.IsCompleted())
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /// <summary>
+    /// 📝 특정 타입의 호떡을 주문했는지 확인
+    /// </summary>
+    public bool HasOrderedType(PreparationUI.FillingType type)
+    {
+        return orderItems.Find(item => item.fillingType == type && !item.IsCompleted()) != null;
+    }
+    
+    /// <summary>
+    /// 📝 특정 타입의 남은 주문 개수 반환
+    /// </summary>
+    public int GetRemainingQuantity(PreparationUI.FillingType type)
+    {
+        OrderItem item = orderItems.Find(i => i.fillingType == type);
+        return item?.GetRemainingQuantity() ?? 0;
+    }
+    
+    /// <summary>
+    /// 🎨 특정 스프라이트로 설정 (외부에서 호출 가능)
+    /// </summary>
+    public void SetCustomerSprite(int spriteIndex)
+    {
+        selectedSpriteIndex = spriteIndex;
+        SelectRandomSprite();
+    }
+    
+    /// <summary>
+    /// 🎨 현재 선택된 스프라이트 인덱스 반환
+    /// </summary>
+    public int GetSelectedSpriteIndex()
+    {
+        return selectedSpriteIndex;
     }
     
     void Start()
@@ -87,11 +315,10 @@ public class Customer : MonoBehaviour
         // 입장 위치에서 시작
         transform.position = enterStartPosition;
         
-        // 주문 타입 랜덤 생성 (임시)
-        orderedType = (Random.Range(0, 2) == 0) ? 
-            PreparationUI.FillingType.Sugar : PreparationUI.FillingType.Seed;
+        // 📝 랜덤 주문 생성
+        GenerateRandomOrder();
         
-        Debug.Log($"👤 {customerName} 입장! 주문: {GetOrderName()}");
+        Debug.Log($"👤 {customerName} (스프라이트 {selectedSpriteIndex}) 입장! 주문: {GetOrderSummary()}");
         
         // 입장 애니메이션 시작
         ChangeState(CustomerState.Entering);
@@ -176,7 +403,7 @@ public class Customer : MonoBehaviour
             case CustomerState.Ordering:
                 if (customerUI != null)
                 {
-                    customerUI.ShowOrderBubble(orderedType, orderedQuantity);
+                    customerUI.ShowOrderBubble(orderItems);
                 }
                 if (customerAnimator != null)
                 {
@@ -324,10 +551,10 @@ public class Customer : MonoBehaviour
         
         PreparationUI.FillingType selectedType = hotteokScript.fillingType;
         
-        // 주문과 일치하는지 확인
-        if (selectedType == orderedType)
+        // 주문에 해당 타입이 있고 아직 필요한지 확인
+        if (HasOrderedType(selectedType))
         {
-            ReceiveCorrectOrder();
+            ReceiveHotteok(selectedType);
         }
         else
         {
@@ -336,22 +563,75 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 올바른 주문 수령
+    /// 📝 호떡 수령 처리 (올바른 주문)
     /// </summary>
-    void ReceiveCorrectOrder()
+    void ReceiveHotteok(PreparationUI.FillingType receivedType)
     {
-        Debug.Log($"🎉 {customerName} 주문 성공! {GetOrderName()} 전달");
+        // 해당 타입의 주문 항목 찾기
+        OrderItem orderItem = orderItems.Find(item => item.fillingType == receivedType && !item.IsCompleted());
         
-        hasReceivedOrder = true;
-        
-        // 선택된 호떡을 손님에게 전달
-        if (StackSalesCounter.Instance.DeliverSelectedHotteokToCustomer())
+        if (orderItem != null)
         {
-            // 점수 추가
-            GameManager.Instance?.AddScore(satisfactionReward);
+            orderItem.receivedQuantity++;
             
-            // 만족하며 떠나기
-            LeaveSatisfied();
+            Debug.Log($"✅ {customerName} {GetHotteokName(receivedType)} 1개 수령! " +
+                     $"({orderItem.receivedQuantity}/{orderItem.quantity}) | 진행: {GetOrderProgress()}");
+            
+            // 선택된 호떡을 손님에게 전달
+            if (StackSalesCounter.Instance.DeliverSelectedHotteokToCustomer())
+            {
+                // 점수 추가 (항목당)
+                GameManager.Instance?.AddScore(satisfactionRewardPerItem);
+                
+                // UI 업데이트
+                if (customerUI != null)
+                {
+                    customerUI.UpdateOrderProgress(orderItems);
+                }
+                
+                // 전체 주문 완료 확인
+                if (IsOrderComplete())
+                {
+                    CompleteEntireOrder();
+                }
+                else
+                {
+                    // 부분 완료 피드백
+                    ShowPartialCompletionFeedback(receivedType);
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ 주문 항목을 찾을 수 없습니다!");
+        }
+    }
+    
+    /// <summary>
+    /// 📝 전체 주문 완료 처리
+    /// </summary>
+    void CompleteEntireOrder()
+    {
+        hasReceivedCompleteOrder = true;
+        
+        // 보너스 점수
+        GameManager.Instance?.AddScore(bonusForCompleteOrder);
+        
+        Debug.Log($"🎉 {customerName} 전체 주문 완료! 보너스 +{bonusForCompleteOrder}점");
+        
+        // 만족하며 떠나기
+        LeaveSatisfied();
+    }
+    
+    /// <summary>
+    /// 📝 부분 완료 피드백
+    /// </summary>
+    void ShowPartialCompletionFeedback(PreparationUI.FillingType receivedType)
+    {
+        if (customerUI != null)
+        {
+            string message = $"{GetHotteokName(receivedType)} 감사해요! 🙂";
+            customerUI.ShowPartialCompletionFeedback(message);
         }
     }
     
@@ -360,7 +640,7 @@ public class Customer : MonoBehaviour
     /// </summary>
     void ReceiveWrongOrder(PreparationUI.FillingType receivedType)
     {
-        Debug.Log($"❌ {customerName} 주문 실패! 주문: {GetOrderName()}, 받음: {GetHotteokName(receivedType)}");
+        Debug.Log($"❌ {customerName} 잘못된 주문! 받음: {GetHotteokName(receivedType)}, 주문: {GetOrderSummary()}");
         
         // 호떡 선택 해제 (다시 선택할 수 있도록)
         StackSalesCounter.Instance.DeselectHotteok();
@@ -463,11 +743,11 @@ public class Customer : MonoBehaviour
     {
         if (wasAngry)
         {
-            Debug.Log($"😡 {customerName} 화내며 퇴장함...");
+            Debug.Log($"😡 {customerName} (스프라이트 {selectedSpriteIndex}) 화내며 퇴장함... 미완료 주문: {GetOrderProgress()}");
         }
         else
         {
-            Debug.Log($"😊 {customerName} 만족하며 퇴장함!");
+            Debug.Log($"😊 {customerName} (스프라이트 {selectedSpriteIndex}) 만족하며 퇴장함! 완료된 주문: {GetOrderSummary()}");
         }
         
         // 스포너에게 알림
@@ -496,14 +776,6 @@ public class Customer : MonoBehaviour
         enterStartPosition = enterPos;
         counterPosition = counterPos;
         exitEndPosition = exitPos;
-    }
-    
-    /// <summary>
-    /// 주문명 반환
-    /// </summary>
-    string GetOrderName()
-    {
-        return GetHotteokName(orderedType);
     }
     
     /// <summary>
@@ -536,5 +808,13 @@ public class Customer : MonoBehaviour
     public float GetWaitProgress()
     {
         return Mathf.Clamp01(currentWaitTime / maxWaitTime);
+    }
+    
+    /// <summary>
+    /// 📝 주문 항목 리스트 반환 (UI에서 사용)
+    /// </summary>
+    public List<OrderItem> GetOrderItems()
+    {
+        return new List<OrderItem>(orderItems);
     }
 }

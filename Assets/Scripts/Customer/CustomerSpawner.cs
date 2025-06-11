@@ -1,5 +1,5 @@
 // Assets/Scripts/Customer/CustomerSpawner.cs
-// 손님 생성 및 전체 관리를 담당하는 시스템
+// 손님 생성 및 전체 관리를 담당하는 시스템 (간단 버전)
 
 using UnityEngine;
 using System.Collections;
@@ -8,36 +8,40 @@ using System.Linq;
 
 public class CustomerSpawner : MonoBehaviour
 {
-    [Header("손님 생성 설정")]
+    [Header("🎯 손님 생성 설정")]
     public GameObject customerPrefab;           // 손님 프리팹
-    public int maxCustomers = 3;                // 최대 동시 손님 수
+    public int maxCustomers = 3;                // 최대 동시 손님 수 (기본 3명)
     public float minSpawnInterval = 3.0f;       // 최소 스폰 간격
     public float maxSpawnInterval = 8.0f;       // 최대 스폰 간격
     public bool autoSpawn = true;               // 자동 스폰 여부
     
-    [Header("카운터 위치 설정")]
+    [Header("📍 카운터 위치 설정 (수동)")]
     public Transform[] counterPositions;        // 카운터 위치들 (3개)
     public Vector3 enterStartOffset = new Vector3(-8f, 0f, 0f);  // 입장 시작 오프셋
     public Vector3 exitEndOffset = new Vector3(8f, 0f, 0f);     // 퇴장 끝 오프셋
     
-    [Header("난이도 설정")]
+    [Header("⚡ 난이도 설정")]
     public float baseWaitTime = 20.0f;          // 기본 대기 시간
     public float difficultyIncreaseRate = 0.9f; // 난이도 증가율 (시간 감소)
     public float minWaitTime = 8.0f;            // 최소 대기 시간
     public int difficultyIncreaseInterval = 5;  // 몇 명마다 난이도 증가
     
-    [Header("사운드 효과")]
+    [Header("🔊 사운드 효과")]
     public AudioClip customerEnterSound;        // 손님 입장 소리
     public AudioClip satisfactionSound;         // 만족 소리
     public AudioClip warningSound;              // 경고 소리
     public AudioClip angrySound;                // 화남 소리
     public AudioClip doorBellSound;             // 문 벨 소리
     
-    [Header("통계")]
-    public int totalCustomersServed = 0;        // 총 서빙한 손님 수
-    public int satisfiedCustomers = 0;          // 만족한 손님 수
-    public int angryCustomers = 0;              // 화난 손님 수
-    public float customerSatisfactionRate = 1.0f; // 만족도 비율
+    [Header("📊 통계 (읽기 전용)")]
+    [SerializeField] private int totalCustomersServed = 0;        // 총 서빙한 손님 수
+    [SerializeField] private int satisfiedCustomers = 0;          // 만족한 손님 수
+    [SerializeField] private int angryCustomers = 0;              // 화난 손님 수
+    [SerializeField] private float customerSatisfactionRate = 1.0f; // 만족도 비율
+    
+    [Header("🐛 디버그")]
+    public bool enableDebugLogs = true;         // 디버그 로그 활성화
+    public bool showGizmos = true;              // 기즈모 표시
     
     // 내부 관리
     private Customer[] activeCustomers;         // 현재 활성 손님들
@@ -82,6 +86,8 @@ public class CustomerSpawner : MonoBehaviour
     /// </summary>
     void InitializeSpawner()
     {
+        DebugLog("🚀 CustomerSpawner 초기화 시작...");
+        
         // 배열 초기화
         activeCustomers = new Customer[maxCustomers];
         counterOccupied = new bool[maxCustomers];
@@ -96,7 +102,7 @@ public class CustomerSpawner : MonoBehaviour
         // 카운터 위치 검증
         ValidateCounterPositions();
         
-        Debug.Log($"✅ CustomerSpawner 초기화 완료! 최대 {maxCustomers}명 동시 수용");
+        DebugLog($"✅ CustomerSpawner 초기화 완료! 최대 {maxCustomers}명 동시 수용");
     }
     
     /// <summary>
@@ -104,40 +110,33 @@ public class CustomerSpawner : MonoBehaviour
     /// </summary>
     void ValidateCounterPositions()
     {
+        // 카운터 위치가 설정되지 않았거나 부족한 경우
         if (counterPositions == null || counterPositions.Length < maxCustomers)
         {
-            Debug.LogError($"❌ 카운터 위치가 부족합니다! 필요: {maxCustomers}개, 현재: {(counterPositions?.Length ?? 0)}개");
-            
-            // 기본 위치 자동 생성
-            CreateDefaultCounterPositions();
+            Debug.LogWarning($"⚠️ 카운터 위치가 부족합니다! 필요: {maxCustomers}개, 현재: {(counterPositions?.Length ?? 0)}개");
+            Debug.LogWarning("👉 Inspector에서 Counter Positions를 수동으로 설정해주세요!");
+            return;
         }
-        else
-        {
-            Debug.Log($"✅ {counterPositions.Length}개 카운터 위치 검증 완료");
-        }
-    }
-    
-    /// <summary>
-    /// 기본 카운터 위치 생성
-    /// </summary>
-    void CreateDefaultCounterPositions()
-    {
-        counterPositions = new Transform[maxCustomers];
         
+        // 카운터 위치 유효성 검사
+        bool allValid = true;
         for (int i = 0; i < maxCustomers; i++)
         {
-            GameObject counterPos = new GameObject($"CounterPosition_{i}");
-            counterPos.transform.SetParent(transform);
-            
-            // 적당한 간격으로 배치
-            float x = (i - 1) * 2f; // 중앙 기준으로 좌우 배치
-            float y = 2f;           // 호떡 철판 위쪽
-            counterPos.transform.position = new Vector3(x, y, 0);
-            
-            counterPositions[i] = counterPos.transform;
+            if (counterPositions[i] == null)
+            {
+                Debug.LogError($"❌ 카운터 {i}가 null입니다! Inspector에서 설정해주세요.");
+                allValid = false;
+            }
+            else
+            {
+                DebugLog($"✅ 카운터 {i}: {counterPositions[i].position}");
+            }
         }
         
-        Debug.Log("🔧 기본 카운터 위치 자동 생성 완료");
+        if (allValid)
+        {
+            DebugLog($"✅ 모든 카운터 위치가 올바르게 설정됨!");
+        }
     }
     
     /// <summary>
@@ -147,8 +146,12 @@ public class CustomerSpawner : MonoBehaviour
     {
         if (spawnCoroutine == null)
         {
+            DebugLog("🎬 손님 자동 스폰 시작!");
             spawnCoroutine = StartCoroutine(SpawnRoutine());
-            Debug.Log("🎬 손님 스폰 시작!");
+        }
+        else
+        {
+            DebugLog("⚠️ 이미 스폰이 진행 중입니다.");
         }
     }
     
@@ -161,7 +164,7 @@ public class CustomerSpawner : MonoBehaviour
         {
             StopCoroutine(spawnCoroutine);
             spawnCoroutine = null;
-            Debug.Log("⏹️ 손님 스폰 중지!");
+            DebugLog("⏹️ 손님 자동 스폰 중지!");
         }
     }
     
@@ -172,14 +175,33 @@ public class CustomerSpawner : MonoBehaviour
     {
         while (true)
         {
-            // 사용 가능한 카운터가 있고 손님 프리팹이 있는 경우에만 스폰
-            if (availableCounters.Count > 0 && customerPrefab != null)
+            // 기본 조건 체크
+            if (availableCounters.Count > 0 && customerPrefab != null && 
+                counterPositions != null && counterPositions.Length >= maxCustomers)
             {
+                DebugLog($"🎯 손님 스폰 시도... (사용 가능한 카운터: {availableCounters.Count})");
                 SpawnCustomer();
+            }
+            else
+            {
+                // 문제 진단
+                if (availableCounters.Count == 0)
+                {
+                    DebugLog("⏳ 모든 카운터가 점유됨. 다음 스폰까지 대기...");
+                }
+                if (customerPrefab == null)
+                {
+                    Debug.LogError("❌ customerPrefab이 null입니다! Inspector에서 설정해주세요.");
+                }
+                if (counterPositions == null || counterPositions.Length < maxCustomers)
+                {
+                    Debug.LogError("❌ counterPositions가 부족합니다! Inspector에서 설정해주세요.");
+                }
             }
             
             // 다음 스폰까지 대기
             float waitTime = Random.Range(minSpawnInterval, maxSpawnInterval);
+            DebugLog($"⏰ 다음 스폰까지 {waitTime:F1}초 대기");
             yield return new WaitForSeconds(waitTime);
         }
     }
@@ -189,9 +211,10 @@ public class CustomerSpawner : MonoBehaviour
     /// </summary>
     public void SpawnCustomer()
     {
+        // 기본 조건 재확인
         if (availableCounters.Count == 0)
         {
-            Debug.Log("⚠️ 사용 가능한 카운터가 없어 손님을 생성할 수 없습니다.");
+            DebugLog("⚠️ 사용 가능한 카운터가 없어 손님을 생성할 수 없습니다.");
             return;
         }
         
@@ -201,14 +224,36 @@ public class CustomerSpawner : MonoBehaviour
             return;
         }
         
+        if (counterPositions == null || counterPositions.Length < maxCustomers)
+        {
+            Debug.LogError("❌ counterPositions가 올바르게 설정되지 않았습니다!");
+            return;
+        }
+        
         // 사용 가능한 카운터 선택
         int counterIndex = availableCounters.Dequeue();
         counterOccupied[counterIndex] = true;
+        
+        // 카운터 위치 확인
+        if (counterPositions[counterIndex] == null)
+        {
+            Debug.LogError($"❌ 카운터 {counterIndex}의 Transform이 null입니다!");
+            
+            // 카운터 다시 사용 가능하게 만들기
+            counterOccupied[counterIndex] = false;
+            availableCounters.Enqueue(counterIndex);
+            return;
+        }
         
         // 위치 계산
         Vector3 counterPos = counterPositions[counterIndex].position;
         Vector3 enterPos = counterPos + enterStartOffset;
         Vector3 exitPos = counterPos + exitEndOffset;
+        
+        DebugLog($"📍 카운터 {counterIndex} 사용");
+        DebugLog($"   카운터 위치: {counterPos}");
+        DebugLog($"   입장 위치: {enterPos}");
+        DebugLog($"   퇴장 위치: {exitPos}");
         
         // 손님 생성
         GameObject customerObj = Instantiate(customerPrefab, enterPos, Quaternion.identity);
@@ -218,6 +263,10 @@ public class CustomerSpawner : MonoBehaviour
         {
             Debug.LogError("❌ customerPrefab에 Customer 컴포넌트가 없습니다!");
             Destroy(customerObj);
+            
+            // 카운터 다시 사용 가능하게 만들기
+            counterOccupied[counterIndex] = false;
+            availableCounters.Enqueue(counterIndex);
             return;
         }
         
@@ -237,10 +286,22 @@ public class CustomerSpawner : MonoBehaviour
         // 문 벨 소리
         PlayDoorBellSound();
         
-        Debug.Log($"👤 {customer.customerName} 생성됨! 카운터: {counterIndex}, 대기시간: {adjustedWaitTime:F1}초");
+        DebugLog($"👤 {customer.customerName} 생성 완료!");
+        DebugLog($"   위치: {customerObj.transform.position}");
+        DebugLog($"   대기시간: {adjustedWaitTime:F1}초");
         
         // 이벤트 발생
         OnCustomerSpawned?.Invoke(customer);
+    }
+    
+    /// <summary>
+    /// 🔘 수동으로 손님 생성 (테스트용)
+    /// </summary>
+    [ContextMenu("Spawn Customer Manually")]
+    public void SpawnCustomerManually()
+    {
+        DebugLog("🎯 수동으로 손님 생성 시도...");
+        SpawnCustomer();
     }
     
     /// <summary>
@@ -277,7 +338,7 @@ public class CustomerSpawner : MonoBehaviour
             counterOccupied[counterIndex] = false;
             availableCounters.Enqueue(counterIndex);
             
-            Debug.Log($"🚪 {customer.customerName} 퇴장 완료! 카운터 {counterIndex} 해제");
+            DebugLog($"🚪 {customer.customerName} 퇴장 완료! 카운터 {counterIndex} 해제 (만족: {wasSatisfied})");
         }
         
         // 통계 업데이트
@@ -306,12 +367,22 @@ public class CustomerSpawner : MonoBehaviour
         // 만족도 비율 계산
         customerSatisfactionRate = (float)satisfiedCustomers / totalCustomersServed;
         
-        Debug.Log($"📊 통계 업데이트: 총 {totalCustomersServed}명, 만족 {satisfiedCustomers}명, 불만 {angryCustomers}명 (만족도: {customerSatisfactionRate:P1})");
+        DebugLog($"📊 통계 업데이트: 총 {totalCustomersServed}명, 만족 {satisfiedCustomers}명, 불만 {angryCustomers}명 (만족도: {customerSatisfactionRate:P1})");
     }
     
     /// <summary>
-    /// 사운드 효과 재생
+    /// 디버그 로그 출력 (활성화된 경우에만)
     /// </summary>
+    void DebugLog(string message)
+    {
+        if (enableDebugLogs)
+        {
+            Debug.Log($"[CustomerSpawner] {message}");
+        }
+    }
+    
+    // ===== 사운드 효과 =====
+    
     public void PlayEnterSound()
     {
         if (customerEnterSound != null)
@@ -357,6 +428,8 @@ public class CustomerSpawner : MonoBehaviour
     /// </summary>
     public void ClearAllCustomers()
     {
+        DebugLog("🧹 모든 손님 제거 시작...");
+        
         for (int i = 0; i < activeCustomers.Length; i++)
         {
             if (activeCustomers[i] != null)
@@ -374,40 +447,30 @@ public class CustomerSpawner : MonoBehaviour
             availableCounters.Enqueue(i);
         }
         
-        Debug.Log("🧹 모든 손님 제거 완료");
+        DebugLog("✅ 모든 손님 제거 완료");
     }
     
-    /// <summary>
-    /// 난이도 설정
-    /// </summary>
+    // ===== 기타 유틸리티 함수들 =====
+    
     public void SetDifficulty(float newBaseWaitTime, float newSpawnIntervalMin, float newSpawnIntervalMax)
     {
         baseWaitTime = newBaseWaitTime;
         minSpawnInterval = newSpawnIntervalMin;
         maxSpawnInterval = newSpawnIntervalMax;
         
-        Debug.Log($"🎚️ 난이도 조정: 대기시간 {baseWaitTime}초, 스폰간격 {minSpawnInterval}-{maxSpawnInterval}초");
+        DebugLog($"🎚️ 난이도 조정: 대기시간 {baseWaitTime}초, 스폰간격 {minSpawnInterval}-{maxSpawnInterval}초");
     }
     
-    /// <summary>
-    /// 현재 활성 손님 수 반환
-    /// </summary>
     public int GetActiveCustomerCount()
     {
         return activeCustomers.Count(c => c != null);
     }
     
-    /// <summary>
-    /// 사용 가능한 카운터 수 반환
-    /// </summary>
     public int GetAvailableCounterCount()
     {
         return availableCounters.Count;
     }
     
-    /// <summary>
-    /// 특정 위치의 손님 반환
-    /// </summary>
     public Customer GetCustomerAtPosition(int counterIndex)
     {
         if (counterIndex >= 0 && counterIndex < activeCustomers.Length)
@@ -417,17 +480,11 @@ public class CustomerSpawner : MonoBehaviour
         return null;
     }
     
-    /// <summary>
-    /// 현재 통계 반환
-    /// </summary>
     public (int total, int satisfied, int angry, float satisfactionRate) GetStatistics()
     {
         return (totalCustomersServed, satisfiedCustomers, angryCustomers, customerSatisfactionRate);
     }
     
-    /// <summary>
-    /// 통계 리셋
-    /// </summary>
     public void ResetStatistics()
     {
         totalCustomersServed = 0;
@@ -436,7 +493,7 @@ public class CustomerSpawner : MonoBehaviour
         customerSatisfactionRate = 1.0f;
         customerIdCounter = 1;
         
-        Debug.Log("📊 통계 리셋 완료");
+        DebugLog("📊 통계 리셋 완료");
     }
     
     /// <summary>
@@ -451,13 +508,61 @@ public class CustomerSpawner : MonoBehaviour
         Debug.Log($"총 서빙: {totalCustomersServed}명");
         Debug.Log($"만족도: {customerSatisfactionRate:P1}");
         Debug.Log($"현재 대기시간: {CalculateWaitTime():F1}초");
+        Debug.Log($"스폰 상태: {(spawnCoroutine != null ? "진행 중" : "중지됨")}");
         
-        for (int i = 0; i < activeCustomers.Length; i++)
+        // 카운터 위치 정보
+        if (counterPositions != null)
         {
-            if (activeCustomers[i] != null)
+            for (int i = 0; i < counterPositions.Length && i < maxCustomers; i++)
             {
-                Debug.Log($"카운터 {i}: {activeCustomers[i].customerName} ({activeCustomers[i].GetCurrentState()})");
+                if (counterPositions[i] != null)
+                {
+                    Vector3 pos = counterPositions[i].position;
+                    bool isOccupied = activeCustomers[i] != null;
+                    string customerName = isOccupied ? activeCustomers[i].customerName : "비어있음";
+                    Debug.Log($"카운터 {i}: {pos} - {customerName}");
+                }
+                else
+                {
+                    Debug.Log($"카운터 {i}: NULL");
+                }
             }
+        }
+        else
+        {
+            Debug.Log("카운터 위치가 설정되지 않음!");
+        }
+    }
+    
+    /// <summary>
+    /// 기즈모 그리기 (Scene 뷰에서 카운터 위치 확인용)
+    /// </summary>
+    void OnDrawGizmos()
+    {
+        if (!showGizmos || counterPositions == null) return;
+        
+        for (int i = 0; i < counterPositions.Length && i < maxCustomers; i++)
+        {
+            if (counterPositions[i] == null) continue;
+            
+            Vector3 pos = counterPositions[i].position;
+            
+            // 카운터 위치 표시 (파란색 원)
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireSphere(pos, 0.7f);
+            
+            // 입장 위치 표시 (초록색 원)
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(pos + enterStartOffset, 0.4f);
+            
+            // 퇴장 위치 표시 (빨간색 원)
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(pos + exitEndOffset, 0.4f);
+            
+            // 연결선 그리기
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(pos + enterStartOffset, pos);
+            Gizmos.DrawLine(pos, pos + exitEndOffset);
         }
     }
 }
