@@ -682,52 +682,63 @@ void HandleBasicStateChange(CustomerState newState)
     /// <summary>
     /// 📝 호떡 수령 처리 (올바른 주문)
     /// </summary>
-    void ReceiveHotteok(PreparationUI.FillingType receivedType)
+    // Customer.cs에서 수정할 부분
+// ReceiveHotteok 메서드에 골드 지급 로직 추가
+
+/// <summary>
+/// 📝 호떡 수령 처리 (올바른 주문) - 골드 시스템 연동
+/// </summary>
+void ReceiveHotteok(PreparationUI.FillingType receivedType)
+{
+    // 해당 타입의 주문 항목 찾기
+    OrderItem orderItem = orderItems.Find(item => item.fillingType == receivedType && !item.IsCompleted());
+    
+    if (orderItem != null)
     {
-        // 해당 타입의 주문 항목 찾기
-        OrderItem orderItem = orderItems.Find(item => item.fillingType == receivedType && !item.IsCompleted());
+        orderItem.receivedQuantity++;
         
-        if (orderItem != null)
+        Debug.Log($"✅ {customerName} {GetHotteokName(receivedType)} 1개 수령! " +
+                 $"({orderItem.receivedQuantity}/{orderItem.quantity}) | 진행: {GetOrderProgress()}");
+        
+        // 선택된 호떡을 손님에게 전달
+        if (StackSalesCounter.Instance.DeliverSelectedHotteokToCustomer())
         {
-            orderItem.receivedQuantity++;
-            
-            DebugEmotion($"✅ {customerName} {GetHotteokName(receivedType)} 1개 수령! " +
-                     $"({orderItem.receivedQuantity}/{orderItem.quantity}) | 진행: {GetOrderProgress()}");
-            
-            // 선택된 호떡을 손님에게 전달
-            if (StackSalesCounter.Instance.DeliverSelectedHotteokToCustomer())
+            // 💰 골드 지급 처리 (새로 추가된 부분)
+            if (GoldManager.Instance != null)
             {
-                // 점수 추가 (항목당)
-                GameManager.Instance?.AddScore(satisfactionRewardPerItem);
-                
-                // UI 업데이트
-                if (customerUI != null)
-                {
-                    customerUI.UpdateOrderProgress(orderItems);
-                }
-                if (useEnhancedEmotions && enhancedUI != null)
-                {
-                    enhancedUI.UpdateOrderProgress(orderItems);
-                }
-                
-                // 전체 주문 완료 확인
-                if (IsOrderComplete())
-                {
-                    CompleteEntireOrder();
-                }
-                else
-                {
-                    // 부분 완료 피드백
-                    ShowPartialCompletionFeedback(receivedType);
-                }
+                GoldManager.Instance.ProcessHotteokSale(receivedType);
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ GoldManager가 없어 골드를 지급할 수 없습니다!");
+            }
+            
+            // 점수 추가 (기존 시스템 유지)
+            GameManager.Instance?.AddScore(satisfactionRewardPerItem);
+            
+            // UI 업데이트
+            if (customerUI != null)
+            {
+                customerUI.UpdateOrderProgress(orderItems);
+            }
+            
+            // 전체 주문 완료 확인
+            if (IsOrderComplete())
+            {
+                CompleteEntireOrder();
+            }
+            else
+            {
+                // 부분 완료 피드백
+                ShowPartialCompletionFeedback(receivedType);
             }
         }
-        else
-        {
-            Debug.LogError("❌ 주문 항목을 찾을 수 없습니다!");
-        }
     }
-    
+    else
+    {
+        Debug.LogError("❌ 주문 항목을 찾을 수 없습니다!");
+    }
+}
     /// <summary>
     /// 📝 전체 주문 완료 처리
     /// </summary>
