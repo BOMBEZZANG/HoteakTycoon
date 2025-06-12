@@ -3488,38 +3488,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 885563769175041752, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
-      propertyPath: enableAnimations
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 1697865906646941406, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
       propertyPath: m_Name
       value: Customer_Prefab
-      objectReference: {fileID: 0}
-    - target: {fileID: 5019553117769165175, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
-      propertyPath: m_Size.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5019553117769165175, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
-      propertyPath: m_Size.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5019553117769165175, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
-      propertyPath: m_Enabled
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7038021584666577912, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
       propertyPath: m_Camera
       value: 
       objectReference: {fileID: 519420031}
-    - target: {fileID: 7531576993045240681, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
-      propertyPath: enableUI
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7961459453128526772, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
-      propertyPath: selectedSpriteIndex
-      value: -1
-      objectReference: {fileID: 0}
     - target: {fileID: 8084217754559161254, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 205.98686

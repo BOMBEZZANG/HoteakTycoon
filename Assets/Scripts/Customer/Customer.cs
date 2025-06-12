@@ -1,9 +1,11 @@
 // Assets/Scripts/Customer/Customer.cs
-// 🔧 손님 이미지 표시 문제 완전 해결 버전
+// 🎭 감정 아이콘 시스템 완전 통합 버전 - 생략 없는 전체 코드
 
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+
+
 
 public class Customer : MonoBehaviour
 {
@@ -78,14 +80,29 @@ public class Customer : MonoBehaviour
     public int angryPenalty = -50;             // 화남 시 감점
     public int bonusForCompleteOrder = 50;     // 전체 주문 완료 보너스
     
+    [Header("🎭 감정 아이콘 시스템 설정")]
+    public bool useEnhancedEmotions = true;    // 향상된 감정 시스템 사용 여부
+    public bool enableEmotionSounds = true;    // 감정 사운드 활성화
+    public bool enableEmotionDebug = false;    // 감정 디버그 로그
+    public bool useAnimatorEmotions = false;   // 얼굴 스프라이트 시스템
+
+    
     // 내부 상태
     private CustomerState currentState = CustomerState.Entering;
     private float currentWaitTime = 0f;
     private bool hasReceivedCompleteOrder = false;
     private bool isInitialized = false;
-    private CustomerUI customerUI;
+    private CustomerUI customerUI;                    // 기존 UI 시스템
+    private CustomerUI_Enhanced enhancedUI;          // 🎭 새로운 감정 아이콘 시스템
     private CustomerAnimator customerAnimator;
     private CustomerSpawner parentSpawner;
+    
+    // 🎭 감정 상태 추적
+    private string lastEmotionShown = "";
+    private float lastEmotionTime = 0f;
+    private bool isShowingWarningEmotion = false;
+    private bool hasShownBoredEmotion = false;
+    private bool hasShownAngryEmotion = false;
     
     // 컴포넌트
     private SpriteRenderer spriteRenderer;
@@ -98,13 +115,21 @@ public class Customer : MonoBehaviour
         customerUI = GetComponent<CustomerUI>();
         customerAnimator = GetComponent<CustomerAnimator>();
         
+        // 🎭 향상된 UI 시스템 초기화
+        enhancedUI = GetComponent<CustomerUI_Enhanced>();
+        if (enhancedUI == null && useEnhancedEmotions)
+        {
+            Debug.LogWarning($"⚠️ {gameObject.name}: CustomerUI_Enhanced 컴포넌트가 없습니다! 기본 UI만 사용됩니다.");
+            useEnhancedEmotions = false;
+        }
+        
         // 초기 설정
         if (customerCollider != null)
         {
             customerCollider.enabled = false; // 들어올 때는 클릭 불가
         }
         
-        Debug.Log($"👤 Customer Awake 완료: {gameObject.name}");
+        DebugEmotion($"👤 Customer Awake 완료: {gameObject.name}");
     }
     
     /// <summary>
@@ -122,9 +147,34 @@ public class Customer : MonoBehaviour
         // 📝 랜덤 주문 생성
         GenerateRandomOrder();
         
+        // 🎭 감정 시스템 초기화
+        InitializeEmotionSystem();
+        
         isInitialized = true;
         
-        Debug.Log($"✅ {customerName} 완전 초기화 완료!");
+        DebugEmotion($"✅ {customerName} 완전 초기화 완료!");
+    }
+    
+    /// <summary>
+    /// 🎭 감정 시스템 초기화
+    /// </summary>
+    void InitializeEmotionSystem()
+    {
+        lastEmotionShown = "";
+        lastEmotionTime = 0f;
+        isShowingWarningEmotion = false;
+        hasShownBoredEmotion = false;
+        hasShownAngryEmotion = false;
+        
+        if (useEnhancedEmotions && enhancedUI != null)
+        {
+            // 감정 시스템 설정 동기화
+            enhancedUI.enableSounds = enableEmotionSounds;
+            enhancedUI.enableUI = true;
+            enhancedUI.enableAnimations = true;
+            
+            DebugEmotion("🎭 감정 시스템 초기화 완료");
+        }
     }
     
     /// <summary>
@@ -166,7 +216,7 @@ public class Customer : MonoBehaviour
                 spriteRenderer.sprite = selectedSprite;
                 spriteRenderer.color = Color.white; // 정상 색상
                 spriteRenderer.enabled = true;
-                Debug.Log($"🎨 {customerName}: 스프라이트 [{selectedSpriteIndex}] '{selectedSprite.name}' 적용됨");
+                DebugEmotion($"🎨 {customerName}: 스프라이트 [{selectedSpriteIndex}] '{selectedSprite.name}' 적용됨");
             }
             else
             {
@@ -195,7 +245,7 @@ public class Customer : MonoBehaviour
         }
         
         // 🔍 최종 상태 확인
-        Debug.Log($"🔍 {customerName} 렌더러 최종 상태: enabled={spriteRenderer.enabled}, sprite={spriteRenderer.sprite?.name ?? "null"}, color={spriteRenderer.color}");
+        DebugEmotion($"🔍 {customerName} 렌더러 최종 상태: enabled={spriteRenderer.enabled}, sprite={spriteRenderer.sprite?.name ?? "null"}, color={spriteRenderer.color}");
     }
     
     /// <summary>
@@ -254,7 +304,7 @@ public class Customer : MonoBehaviour
         }
         
         // 디버그 출력
-        Debug.Log($"📝 {customerName} 주문 생성: {GetOrderSummary()}");
+        DebugEmotion($"📝 {customerName} 주문 생성: {GetOrderSummary()}");
     }
     
     void Start()
@@ -273,6 +323,18 @@ public class Customer : MonoBehaviour
     void Update()
     {
         UpdateCustomerState();
+        
+        // 🎛️ 개발자 모드 키보드 입력 (에디터에서만)
+        if (Application.isEditor && enableEmotionDebug)
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1)) ShowHappiness();
+            if (Input.GetKeyDown(KeyCode.Alpha2)) ShowAnger();
+            if (Input.GetKeyDown(KeyCode.Alpha3)) ShowConfusion();
+            if (Input.GetKeyDown(KeyCode.Alpha4)) ShowLove();
+            if (Input.GetKeyDown(KeyCode.Alpha5)) ShowWarning();
+            if (Input.GetKeyDown(KeyCode.Alpha6)) ShowStars();
+            if (Input.GetKeyDown(KeyCode.Alpha7)) TestEmotionSequence();
+        }
     }
     
     /// <summary>
@@ -286,8 +348,8 @@ public class Customer : MonoBehaviour
             return;
         }
         
-        Debug.Log($"👤 {customerName} (스프라이트 {selectedSpriteIndex}) 입장! 주문: {GetOrderSummary()}");
-        Debug.Log($"   현재 위치: {transform.position}");
+        DebugEmotion($"👤 {customerName} (스프라이트 {selectedSpriteIndex}) 입장! 주문: {GetOrderSummary()}");
+        DebugEmotion($"   현재 위치: {transform.position}");
         
         // 입장 애니메이션 시작
         ChangeState(CustomerState.Entering);
@@ -312,7 +374,7 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 대기 상태 업데이트
+    /// 🎭 대기 상태 업데이트 (감정 아이콘 포함)
     /// </summary>
     void UpdateWaitingState()
     {
@@ -325,6 +387,19 @@ public class Customer : MonoBehaviour
             customerUI.UpdateWaitProgress(waitProgress);
         }
         
+        // 🎭 감정 아이콘 업데이트 (Enhanced UI)
+        if (useEnhancedEmotions && enhancedUI != null)
+        {
+            enhancedUI.UpdateWaitProgress(waitProgress);
+            
+            // 대기 시간에 따른 감정 변화
+            if (waitProgress > 0.6f && waitProgress < 0.65f && !hasShownBoredEmotion) // 60% 시점에서 한 번만
+            {
+                ShowEmotion("sleepy", 1.5f, "지루함 표시");
+                hasShownBoredEmotion = true;
+            }
+        }
+        
         // 경고 상태로 전환
         if (waitProgress >= warningThreshold && currentState == CustomerState.Waiting)
         {
@@ -333,7 +408,7 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 경고 상태 업데이트
+    /// 🎭 경고 상태 업데이트 (감정 아이콘 포함)
     /// </summary>
     void UpdateWarningState()
     {
@@ -346,6 +421,19 @@ public class Customer : MonoBehaviour
             customerUI.UpdateWaitProgress(waitProgress);
         }
         
+        // 🎭 감정 아이콘 업데이트 (Enhanced UI)
+        if (useEnhancedEmotions && enhancedUI != null)
+        {
+            enhancedUI.UpdateWaitProgress(waitProgress);
+            
+            // 경고 단계에서 점점 화남 표시
+            if (waitProgress > 0.9f && waitProgress < 0.95f && !hasShownAngryEmotion) // 90% 시점에서 한 번만
+            {
+                ShowEmotion("angry", 2f, "분노 전환");
+                hasShownAngryEmotion = true;
+            }
+        }
+        
         // 화내며 떠나기
         if (waitProgress >= 1.0f)
         {
@@ -354,98 +442,158 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 상태 변경
+    /// 🎭 상태 변경 (감정 아이콘 시스템 통합)
     /// </summary>
-    void ChangeState(CustomerState newState)
+/// <summary>
+/// 🎭 상태 변경 (CustomerUI_Enhanced 전용 버전)
+/// </summary>
+void ChangeState(CustomerState newState)
+{
+    CustomerState oldState = currentState;
+    currentState = newState;
+    
+    DebugEmotion($"👤 {customerName} 상태 변경: {oldState} → {newState}");
+    
+    // CustomerUI_Enhanced가 없으면 기본 동작만
+    if (!useEnhancedEmotions || enhancedUI == null)
     {
-        CustomerState oldState = currentState;
-        currentState = newState;
-        
-        Debug.Log($"👤 {customerName} 상태 변경: {oldState} → {newState}");
-        
-        // 상태별 처리
-        switch (newState)
-        {
-            case CustomerState.Entering:
-                break;
-                
-            case CustomerState.Ordering:
-                if (customerUI != null)
-                {
-                    customerUI.ShowOrderBubble(orderItems);
-                }
-                if (customerAnimator != null)
-                {
-                    customerAnimator.PlayOrderingAnimation();
-                }
-                break;
-                
-            case CustomerState.Waiting:
-                if (customerCollider != null)
-                {
-                    customerCollider.enabled = true; // 클릭 가능하게
-                }
-                if (customerAnimator != null)
-                {
-                    customerAnimator.PlayWaitingAnimation();
-                }
-                break;
-                
-            case CustomerState.Warning:
-                if (customerUI != null)
-                {
-                    customerUI.ShowWarningIcon();
-                }
-                if (customerAnimator != null)
-                {
-                    customerAnimator.PlayWarningAnimation();
-                }
-                CustomerSpawner.Instance?.PlayWarningSound();
-                break;
-                
-            case CustomerState.Satisfied:
-                if (customerCollider != null)
-                {
-                    customerCollider.enabled = false; // 클릭 불가
-                }
-                if (customerUI != null)
-                {
-                    customerUI.ShowSatisfactionEffect();
-                    customerUI.HideOrderBubble();
-                    customerUI.HideWarningIcon();
-                }
-                if (customerAnimator != null)
-                {
-                    customerAnimator.PlaySatisfiedAnimation();
-                }
-                CustomerSpawner.Instance?.PlaySatisfactionSound();
-                break;
-                
-            case CustomerState.Angry:
-                if (customerCollider != null)
-                {
-                    customerCollider.enabled = false; // 클릭 불가
-                }
-                if (customerUI != null)
-                {
-                    customerUI.ShowAngryEffect();
-                    customerUI.HideOrderBubble();
-                }
-                if (customerAnimator != null)
-                {
-                    customerAnimator.PlayAngryAnimation();
-                }
-                CustomerSpawner.Instance?.PlayAngrySound();
-                break;
-                
-            case CustomerState.Exiting:
-                if (customerUI != null)
-                {
-                    customerUI.HideAllUI();
-                }
-                break;
-        }
+        DebugEmotion("⚠️ CustomerUI_Enhanced가 비활성화되어 기본 동작만 실행됩니다.");
+        HandleBasicStateChange(newState);
+        return;
     }
+    
+    // 🎭 CustomerUI_Enhanced 기반 상태 처리
+    switch (newState)
+    {
+        case CustomerState.Entering:
+            // 🎭 입장 시 중성 표정
+            ShowEmotion("neutral", 1f, "입장");
+            break;
+            
+        case CustomerState.Ordering:
+            // 🎭 주문 시 기쁨 + 주문 말풍선
+            enhancedUI.ShowOrderBubble(orderItems);
+            ShowEmotion("happy", 1.5f, "주문 표시");
+            break;
+            
+        case CustomerState.Waiting:
+            // 🎭 대기 시 평온한 표정
+            if (customerCollider != null)
+            {
+                customerCollider.enabled = true; // 클릭 가능하게
+            }
+            ShowEmotion("waiting", -1f, "대기 시작"); // 무한 표시
+            break;
+            
+        case CustomerState.Warning:
+            // 🎭 경고 시 경고 아이콘
+            ShowEmotion("warning", -1f, "경고 상태"); // 경고 아이콘 (무한 표시)
+            isShowingWarningEmotion = true;
+            CustomerSpawner.Instance?.PlayWarningSound();
+            break;
+            
+        case CustomerState.Satisfied:
+            // 🎭 만족 시 감정 시퀀스
+            if (customerCollider != null)
+            {
+                customerCollider.enabled = false; // 클릭 불가
+            }
+            
+            // 🎭 만족 감정 시퀀스: 별점 → 사랑 → 만족
+            string[] emotions = {"star", "heart", "satisfaction"};
+            float[] durations = {1f, 1f, 1.5f};
+            enhancedUI.ShowEmotionSequence(emotions, durations);
+            enhancedUI.HideOrderBubble();
+            
+            DebugEmotion("🎭 만족 감정 시퀀스 시작");
+            CustomerSpawner.Instance?.PlaySatisfactionSound();
+            break;
+            
+        case CustomerState.Angry:
+            // 🎭 분노 시 격분 표정
+            if (customerCollider != null)
+            {
+                customerCollider.enabled = false; // 클릭 불가
+            }
+            
+            ShowEmotion("furious", 3f, "격분 퇴장"); // 격분 아이콘
+            CustomerSpawner.Instance?.PlayAngrySound();
+            break;
+            
+        case CustomerState.Exiting:
+            // 🎭 퇴장 시 모든 UI 숨기기
+            enhancedUI.HideAllUI();
+            isShowingWarningEmotion = false;
+            break;
+    }
+}
+
+/// <summary>
+/// 🔧 기본 상태 변경 (CustomerUI_Enhanced 없을 때)
+/// </summary>
+void HandleBasicStateChange(CustomerState newState)
+{
+    switch (newState)
+    {
+        case CustomerState.Ordering:
+            // 기존 UI 시스템 사용
+            if (customerUI != null)
+            {
+                customerUI.ShowOrderBubble(orderItems);
+            }
+            break;
+            
+        case CustomerState.Waiting:
+            if (customerCollider != null)
+            {
+                customerCollider.enabled = true;
+            }
+            break;
+            
+        case CustomerState.Warning:
+            if (customerUI != null)
+            {
+                customerUI.ShowWarningIcon();
+            }
+            CustomerSpawner.Instance?.PlayWarningSound();
+            break;
+            
+        case CustomerState.Satisfied:
+            if (customerCollider != null)
+            {
+                customerCollider.enabled = false;
+            }
+            if (customerUI != null)
+            {
+                customerUI.ShowSatisfactionEffect();
+                customerUI.HideOrderBubble();
+                customerUI.HideWarningIcon();
+            }
+            CustomerSpawner.Instance?.PlaySatisfactionSound();
+            break;
+            
+        case CustomerState.Angry:
+            if (customerCollider != null)
+            {
+                customerCollider.enabled = false;
+            }
+            if (customerUI != null)
+            {
+                customerUI.ShowAngryEffect();
+                customerUI.HideOrderBubble();
+            }
+            CustomerSpawner.Instance?.PlayAngrySound();
+            break;
+            
+        case CustomerState.Exiting:
+            if (customerUI != null)
+            {
+                customerUI.HideAllUI();
+            }
+            isShowingWarningEmotion = false;
+            break;
+    }
+}
     
     /// <summary>
     /// 가게로 들어오는 애니메이션
@@ -493,7 +641,7 @@ public class Customer : MonoBehaviour
             return;
         }
         
-        Debug.Log($"👤 {customerName} 클릭됨!");
+        DebugEmotion($"👤 {customerName} 클릭됨!");
         
         // 선택된 호떡이 있는지 확인
         if (StackSalesCounter.Instance == null)
@@ -505,7 +653,7 @@ public class Customer : MonoBehaviour
         GameObject selectedHotteok = StackSalesCounter.Instance.GetSelectedHotteok();
         if (selectedHotteok == null)
         {
-            Debug.Log("선택된 호떡이 없습니다! 먼저 판매대에서 호떡을 선택하세요.");
+            DebugEmotion("선택된 호떡이 없습니다! 먼저 판매대에서 호떡을 선택하세요.");
             ShowNoSelectionFeedback();
             return;
         }
@@ -543,7 +691,7 @@ public class Customer : MonoBehaviour
         {
             orderItem.receivedQuantity++;
             
-            Debug.Log($"✅ {customerName} {GetHotteokName(receivedType)} 1개 수령! " +
+            DebugEmotion($"✅ {customerName} {GetHotteokName(receivedType)} 1개 수령! " +
                      $"({orderItem.receivedQuantity}/{orderItem.quantity}) | 진행: {GetOrderProgress()}");
             
             // 선택된 호떡을 손님에게 전달
@@ -556,6 +704,10 @@ public class Customer : MonoBehaviour
                 if (customerUI != null)
                 {
                     customerUI.UpdateOrderProgress(orderItems);
+                }
+                if (useEnhancedEmotions && enhancedUI != null)
+                {
+                    enhancedUI.UpdateOrderProgress(orderItems);
                 }
                 
                 // 전체 주문 완료 확인
@@ -586,35 +738,51 @@ public class Customer : MonoBehaviour
         // 보너스 점수
         GameManager.Instance?.AddScore(bonusForCompleteOrder);
         
-        Debug.Log($"🎉 {customerName} 전체 주문 완료! 보너스 +{bonusForCompleteOrder}점");
+        DebugEmotion($"🎉 {customerName} 전체 주문 완료! 보너스 +{bonusForCompleteOrder}점");
         
         // 만족하며 떠나기
         LeaveSatisfied();
     }
     
     /// <summary>
-    /// 📝 부분 완료 피드백
+    /// 🎭 부분 완료 피드백 (감정 아이콘 포함)
     /// </summary>
     void ShowPartialCompletionFeedback(PreparationUI.FillingType receivedType)
     {
+        string message = $"{GetHotteokName(receivedType)} 감사해요! 🙂";
+        
+        // 🎭 만족 아이콘 표시
+        ShowEmotion("satisfaction", 1.5f, "부분 완료");
+        
+        if (useEnhancedEmotions && enhancedUI != null) 
+        {
+            enhancedUI.ShowPartialCompletionFeedback(message);
+        }
+        
         if (customerUI != null)
         {
-            string message = $"{GetHotteokName(receivedType)} 감사해요! 🙂";
             customerUI.ShowPartialCompletionFeedback(message);
         }
     }
     
     /// <summary>
-    /// 잘못된 주문 수령
+    /// 🎭 잘못된 주문 수령 (감정 아이콘 포함)
     /// </summary>
     void ReceiveWrongOrder(PreparationUI.FillingType receivedType)
     {
-        Debug.Log($"❌ {customerName} 잘못된 주문! 받음: {GetHotteokName(receivedType)}, 주문: {GetOrderSummary()}");
+        DebugEmotion($"❌ {customerName} 잘못된 주문! 받음: {GetHotteokName(receivedType)}, 주문: {GetOrderSummary()}");
         
         // 호떡 선택 해제 (다시 선택할 수 있도록)
         StackSalesCounter.Instance.DeselectHotteok();
         
-        // 화남 피드백
+        // 🎭 혼란 아이콘 표시
+        ShowEmotion("confused", 2f, "잘못된 주문");
+        
+        if (useEnhancedEmotions && enhancedUI != null) 
+        {
+            enhancedUI.ShowWrongOrderFeedback();
+        }
+        
         if (customerUI != null)
         {
             customerUI.ShowWrongOrderFeedback();
@@ -626,11 +794,19 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 호떡 선택 안함 피드백
+    /// 🎭 호떡 선택 안함 피드백 (감정 아이콘 포함)
     /// </summary>
     void ShowNoSelectionFeedback()
     {
-        Debug.Log($"💭 {customerName}: 호떡을 먼저 선택해주세요!");
+        DebugEmotion($"💭 {customerName}: 호떡을 먼저 선택해주세요!");
+        
+        // 🎭 생각 아이콘 표시
+        ShowEmotion("thinking", 1.5f, "호떡 선택 안함");
+        
+        if (useEnhancedEmotions && enhancedUI != null) 
+        {
+            enhancedUI.ShowNoSelectionFeedback();
+        }
         
         if (customerUI != null)
         {
@@ -712,11 +888,11 @@ public class Customer : MonoBehaviour
     {
         if (wasAngry)
         {
-            Debug.Log($"😡 {customerName} (스프라이트 {selectedSpriteIndex}) 화내며 퇴장함... 미완료 주문: {GetOrderProgress()}");
+            DebugEmotion($"😡 {customerName} (스프라이트 {selectedSpriteIndex}) 화내며 퇴장함... 미완료 주문: {GetOrderProgress()}");
         }
         else
         {
-            Debug.Log($"😊 {customerName} (스프라이트 {selectedSpriteIndex}) 만족하며 퇴장함! 완료된 주문: {GetOrderSummary()}");
+            DebugEmotion($"😊 {customerName} (스프라이트 {selectedSpriteIndex}) 만족하며 퇴장함! 완료된 주문: {GetOrderSummary()}");
         }
         
         // 스포너에게 알림
@@ -729,7 +905,86 @@ public class Customer : MonoBehaviour
         Destroy(gameObject);
     }
     
-    // ===== 유틸리티 함수들 =====
+    // ============= 🎭 감정 아이콘 시스템 핵심 함수들 =============
+    
+    /// <summary>
+    /// 🎭 감정 표시 (통합 함수)
+    /// </summary>
+    void ShowEmotion(string emotionKey, float duration = 2f, string context = "")
+    {
+        if (!useEnhancedEmotions || enhancedUI == null) return;
+        
+        // 중복 감정 방지
+        if (lastEmotionShown == emotionKey && Time.time - lastEmotionTime < 1f)
+        {
+            return;
+        }
+        
+        lastEmotionShown = emotionKey;
+        lastEmotionTime = Time.time;
+        
+        // 감정 아이콘 표시
+        enhancedUI.ShowEmotionIcon(emotionKey, duration, enableEmotionSounds);
+        
+        DebugEmotion($"🎭 감정 표시: {emotionKey} (지속: {duration}초) - {context}");
+    }
+    
+    /// <summary>
+    /// 🎭 감정 디버그 로그
+    /// </summary>
+    void DebugEmotion(string message)
+    {
+        if (enableEmotionDebug)
+        {
+            Debug.Log($"[{customerName}] {message}");
+        }
+    }
+    
+    // ============= 🛠️ 감정 시스템 편의 함수들 =============
+    
+    /// <summary>
+    /// 🎭 빠른 감정 표시 함수들
+    /// </summary>
+    public void ShowHappiness() => ShowEmotion("happy", 1.5f, "수동 호출");
+    public void ShowSatisfaction() => ShowEmotion("satisfaction", 2f, "수동 호출");
+    public void ShowAnger() => ShowEmotion("angry", 2f, "수동 호출");
+    public void ShowFury() => ShowEmotion("furious", 3f, "수동 호출");
+    public void ShowWarning() => ShowEmotion("warning", -1f, "수동 호출");
+    public void ShowConfusion() => ShowEmotion("confused", 1.5f, "수동 호출");
+    public void ShowThinking() => ShowEmotion("thinking", 2f, "수동 호출");
+    public void ShowLove() => ShowEmotion("heart", 1.5f, "수동 호출");
+    public void ShowStars() => ShowEmotion("star", 2f, "수동 호출");
+    
+    /// <summary>
+    /// 🎭 감정 시스템 설정 함수들
+    /// </summary>
+    public void EnableEmotionSystem(bool enable)
+    {
+        useEnhancedEmotions = enable;
+        if (enhancedUI != null)
+        {
+            enhancedUI.SetUIEnabled(enable);
+        }
+        DebugEmotion($"🎭 감정 시스템 {(enable ? "활성화" : "비활성화")}");
+    }
+    
+    public void EnableEmotionSounds(bool enable)
+    {
+        enableEmotionSounds = enable;
+        if (enhancedUI != null)
+        {
+            enhancedUI.enableSounds = enable;
+        }
+        DebugEmotion($"🔊 감정 사운드 {(enable ? "활성화" : "비활성화")}");
+    }
+    
+    public void EnableEmotionDebug(bool enable)
+    {
+        enableEmotionDebug = enable;
+        DebugEmotion($"🐛 감정 디버그 {(enable ? "활성화" : "비활성화")}");
+    }
+    
+    // ===== 기존 유틸리티 함수들 (변경 없음) =====
     
     public void SetSpawner(CustomerSpawner spawner)
     {
@@ -742,10 +997,10 @@ public class Customer : MonoBehaviour
         counterPosition = counterPos;
         exitEndPosition = exitPos;
         
-        Debug.Log($"📍 {customerName} 위치 설정됨:");
-        Debug.Log($"   입장: {enterStartPosition}");
-        Debug.Log($"   카운터: {counterPosition}");
-        Debug.Log($"   퇴장: {exitEndPosition}");
+        DebugEmotion($"📍 {customerName} 위치 설정됨:");
+        DebugEmotion($"   입장: {enterStartPosition}");
+        DebugEmotion($"   카운터: {counterPosition}");
+        DebugEmotion($"   퇴장: {exitEndPosition}");
     }
     
     public string GetOrderSummary()
@@ -837,5 +1092,65 @@ public class Customer : MonoBehaviour
     public List<OrderItem> GetOrderItems()
     {
         return new List<OrderItem>(orderItems);
+    }
+    
+    // ============= 🛠️ 디버그 및 테스트 함수들 =============
+    
+    /// <summary>
+    /// 🎭 에디터 테스트 함수들 (Context Menu)
+    /// </summary>
+    [ContextMenu("🎭 Test Happy Emotion")]
+    public void TestHappyEmotion() => ShowHappiness();
+    
+    [ContextMenu("🎭 Test Angry Emotion")]
+    public void TestAngryEmotion() => ShowAnger();
+    
+    [ContextMenu("🎭 Test Confusion Emotion")]
+    public void TestConfusionEmotion() => ShowConfusion();
+    
+    [ContextMenu("🎭 Test Love Emotion")]
+    public void TestLoveEmotion() => ShowLove();
+    
+    [ContextMenu("🎭 Test Star Emotion")]
+    public void TestStarEmotion() => ShowStars();
+    
+    [ContextMenu("🎭 Test Emotion Sequence")]
+    public void TestEmotionSequence()
+    {
+        if (useEnhancedEmotions && enhancedUI != null)
+        {
+            string[] emotions = {"happy", "thinking", "satisfaction", "heart"};
+            float[] durations = {1f, 1f, 1f, 2f};
+            enhancedUI.ShowEmotionSequence(emotions, durations);
+            DebugEmotion("🎭 감정 시퀀스 테스트 실행");
+        }
+    }
+    
+    [ContextMenu("🐛 Print Debug Info")]
+    public void PrintDebugInfo()
+    {
+        Debug.Log("=== Customer Debug Info ===");
+        Debug.Log($"👤 손님: {customerName} (ID: {customerID})");
+        Debug.Log($"🎭 감정 시스템: {(useEnhancedEmotions ? "활성화" : "비활성화")}");
+        Debug.Log($"🔊 감정 사운드: {(enableEmotionSounds ? "활성화" : "비활성화")}");
+        Debug.Log($"🐛 감정 디버그: {(enableEmotionDebug ? "활성화" : "비활성화")}");
+        Debug.Log($"📊 현재 상태: {currentState}");
+        Debug.Log($"⏰ 대기 시간: {currentWaitTime:F1}초 / {maxWaitTime}초");
+        Debug.Log($"📝 주문: {GetOrderSummary()}");
+        Debug.Log($"📈 진행: {GetOrderProgress()}");
+        Debug.Log($"🎭 마지막 감정: {lastEmotionShown} ({Time.time - lastEmotionTime:F1}초 전)");
+        Debug.Log($"⚠️ 경고 표시 중: {isShowingWarningEmotion}");
+        Debug.Log($"💤 지루함 표시됨: {hasShownBoredEmotion}");
+        Debug.Log($"😡 분노 표시됨: {hasShownAngryEmotion}");
+        
+        // Enhanced UI 상태
+        if (enhancedUI != null)
+        {
+            Debug.Log($"🎭 Enhanced UI: 활성화됨");
+        }
+        else
+        {
+            Debug.Log($"❌ Enhanced UI: 없음");
+        }
     }
 }
