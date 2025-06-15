@@ -359,10 +359,88 @@ MonoBehaviour:
   satisfactionRewardPerItem: 50
   angryPenalty: -50
   bonusForCompleteOrder: 50
+  usePointManagerSystem: 1
   useEnhancedEmotions: 1
   enableEmotionSounds: 1
   enableEmotionDebug: 0
-  useAnimatorEmotions: 0
+  neutralEmotionIcon: {fileID: 0}
+  happyEmotionIcon: {fileID: 0}
+  satisfactionEmotionIcon: {fileID: 0}
+  confusedEmotionIcon: {fileID: 0}
+  warnEmotionIcon: {fileID: 0}
+  angryEmotionIcon: {fileID: 0}
+  sadEmotionIcon: {fileID: 0}
+  thinkingEmotionIcon: {fileID: 0}
+  heartEmotionIcon: {fileID: 0}
+  starEmotionIcon: {fileID: 0}
+  furiousEmotionIcon: {fileID: 0}
+  happySound: {fileID: 0}
+  satisfactionSound: {fileID: 0}
+  confusedSound: {fileID: 0}
+  warnSound: {fileID: 0}
+  angrySound: {fileID: 0}
+  sadSound: {fileID: 0}
+  heartSound: {fileID: 0}
+  starSound: {fileID: 0}
+  emotionDisplayDuration: 2
+  emotionIconOffset: {x: 0, y: 1.5, z: 0}
+  emotionIconScale: 1
+  emotionAnimationSpeed: 1
+  useMovementAnimation: 1
+  movementCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  enableWalkingBob: 1
+  walkingBobHeight: 0.1
+  walkingBobSpeed: 5
+  clickRadius: 2
+  interactionLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  enableClickHighlight: 1
+  highlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  enterSound: {fileID: 0}
+  orderSound: {fileID: 0}
+  receiveItemSound: {fileID: 0}
+  completeOrderSound: {fileID: 0}
+  wrongOrderSound: {fileID: 0}
+  exitSatisfiedSound: {fileID: 0}
+  exitAngrySound: {fileID: 0}
+  satisfactionEffect: {fileID: 0}
+  angryEffect: {fileID: 0}
+  orderCompleteEffect: {fileID: 0}
+  wrongOrderEffect: {fileID: 0}
+  clickEffect: {fileID: 0}
+  enableAutoDestroy: 1
+  autoDestroyDelay: 2
+  saveStatistics: 1
+  enablePerformanceMode: 0
+  enableDebugLogs: 1
+  showDebugGizmos: 0
+  enableTestMode: 0
+  testSatisfiedKey: 113
+  testAngryKey: 101
 --- !u!114 &8019092159737793809
 MonoBehaviour:
   m_ObjectHideFlags: 0

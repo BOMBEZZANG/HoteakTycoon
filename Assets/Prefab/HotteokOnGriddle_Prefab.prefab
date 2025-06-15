@@ -313,7 +313,7 @@ RectTransform:
   m_GameObject: {fileID: 5128710866469858514}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.25, y: 0.35, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8709232305805694670}
@@ -512,7 +512,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 2
+  m_SortingOrder: 10
   m_TargetDisplay: 0
 --- !u!114 &5551427124454374239
 MonoBehaviour:
@@ -935,7 +935,11 @@ MonoBehaviour:
   goodZoneIndicator: {fileID: 956428031967436874}
   resultTextObject: {fileID: 0}
   resultText: {fileID: 0}
+  resultTextTMP: {fileID: 0}
   resultTextDisplayTime: 1.5
+  cookingTimerUI: {fileID: 0}
+  cookingProgressSlider: {fileID: 0}
+  cookingStateText: {fileID: 0}
   flipIndicatorIcon: {fileID: 0}
   flipArrowIcon: {fileID: 0}
   iconBlinkSpeed: 2
@@ -968,22 +972,33 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  flipRotationAxis: {x: 0, y: 0, z: 1}
-  flipHeight: 0.3
-  cookingProgressSlider: {fileID: 0}
-  cookingTimerUI: {fileID: 0}
-  cookingTimeText: {fileID: 0}
-  almostDoneColor: {r: 1, g: 0.5, b: 0, a: 1}
-  initialUnpressedSprite: {fileID: 0}
+  unPressedSugarSprite: {fileID: 0}
+  pressedSugarSprite: {fileID: 8693723918302632138, guid: ede4626bc182b08469d2d8cab4476c39, type: 3}
+  cookedSugarSprite: {fileID: -2605615185610052947, guid: 33a628eb3d0825740bd01a1a3be01ab0, type: 3}
+  burntSugarSprite: {fileID: 0}
+  unPressedSeedSprite: {fileID: 0}
+  pressedSeedSprite: {fileID: -4356015486030424005, guid: c1c65f1756adb0c44adea10b19b8f13a, type: 3}
+  cookedSeedSprite: {fileID: -3331199425476054103, guid: b9ac12e7810d0b940b70e1a8a5356f29, type: 3}
+  burntSeedSprite: {fileID: 0}
   readyToPressSugarSprite: {fileID: -7167818681738910510, guid: 47e9c531185ef3942883488de2985d5b, type: 3}
   readyToPressSeedSprite: {fileID: -2136349348937498198, guid: 66f801c64623edf499fc964dd34a083a, type: 3}
-  pressedSugarSprite: {fileID: 8693723918302632138, guid: ede4626bc182b08469d2d8cab4476c39, type: 3}
-  pressedSeedSprite: {fileID: -4356015486030424005, guid: c1c65f1756adb0c44adea10b19b8f13a, type: 3}
-  flippedSugarSprite: {fileID: 3755606153230528415, guid: 2f61f161beae5c8418ef726b15bd22a5, type: 3}
-  flippedSeedSprite: {fileID: 7560782464706946789, guid: 47b3eae278d5e6d43a21a45563962021, type: 3}
-  cookedSugarSprite: {fileID: -2605615185610052947, guid: 33a628eb3d0825740bd01a1a3be01ab0, type: 3}
-  cookedSeedSprite: {fileID: -3331199425476054103, guid: b9ac12e7810d0b940b70e1a8a5356f29, type: 3}
   burntSprite: {fileID: -4749823285884285777, guid: 2523999ea0e969046af44b4fd71982e7, type: 3}
+  pressSound: {fileID: 0}
+  flipSound: {fileID: 0}
+  cookingCompleteSound: {fileID: 0}
+  burnSound: {fileID: 0}
+  readyToPressSound: {fileID: 0}
+  readyToFlipSound: {fileID: 0}
+  pressParticleEffect: {fileID: 0}
+  flipParticleEffect: {fileID: 0}
+  cookingCompleteEffect: {fileID: 0}
+  burnParticleEffect: {fileID: 0}
+  steamEffect: {fileID: 0}
+  enablePointManagerIntegration: 1
+  showPointFeedback: 1
+  pointFeedbackPrefab: {fileID: 0}
+  enableDebugLogs: 1
+  showTimerInfo: 0
 --- !u!61 &2615660671197094005
 BoxCollider2D:
   m_ObjectHideFlags: 0

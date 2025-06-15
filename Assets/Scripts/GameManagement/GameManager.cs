@@ -1,5 +1,5 @@
-// Assets/Scripts/GameManager.cs
-// 🌅 하루 시간 시스템이 추가된 게임 매니저
+// Assets/Scripts/GameManagement/GameManager.cs
+// 🌅 PointManager 연동이 완료된 완전한 버전
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -69,16 +69,46 @@ public class GameManager : MonoBehaviour
     public Slider dayProgressSlider;              // 하루 진행도 슬라이더
     public GameObject dayEndPanel;                // 하루 종료 패널
     
+    [Header("💎 포인트 시스템 UI")]
+    public TextMeshProUGUI currentPointsText;     // 현재 포인트 표시
+    public TextMeshProUGUI todaysPointsText;      // 오늘 포인트 표시
+    public TextMeshProUGUI streakStatusText;      // 연속 기록 상태 표시
+    public TextMeshProUGUI pointStreakInfoText;   // 포인트 연속 정보
+    
     [Header("손님 통계 UI")]
     public TextMeshProUGUI totalCustomersText;     // 총 손님 수
     public TextMeshProUGUI satisfiedCustomersText; // 만족한 손님 수
     public TextMeshProUGUI satisfactionRateText;   // 만족도 비율
+    
+    [Header("🔊 게임 사운드")]
+    public AudioClip gameStartSound;              // 게임 시작 사운드
+    public AudioClip dayEndSound;                 // 하루 종료 사운드
+    public AudioClip gameOverSound;               // 게임 오버 사운드
+    public AudioClip goalAchievedSound;           // 목표 달성 사운드
+    public AudioClip timeWarningSound;            // 시간 경고 사운드
+    
+    [Header("🎉 목표 달성 효과")]
+    public GameObject goalAchievedEffect;         // 목표 달성 효과
+    public float goalEffectDuration = 3f;         // 효과 지속 시간
+    
+    [Header("⚙️ 게임 설정")]
+    public bool autoSaveEnabled = true;           // 자동 저장 활성화
+    public float autoSaveInterval = 30f;          // 자동 저장 간격 (초)
+    public bool showDebugInfo = false;            // 디버그 정보 표시
+    
+    [Header("🐛 디버그")]
+    public bool enableDebugLogs = true;           // 디버그 로그 활성화
+    public bool enableTimeSkip = false;           // 시간 스킵 활성화 (디버그용)
+    public KeyCode timeSkipKey = KeyCode.T;       // 시간 스킵 키
     
     // 싱글톤
     public static GameManager Instance { get; private set; }
     
     // 🌅 하루 시간 관련 내부 변수
     private TimeOfDay previousTimeOfDay = TimeOfDay.Dawn;
+    private float autoSaveTimer = 0f;
+    private bool isGameStarted = false;
+    private AudioSource audioSource;
     
     // 이벤트
     public System.Action<int> OnScoreChanged;
@@ -86,6 +116,8 @@ public class GameManager : MonoBehaviour
     public System.Action OnGameOver;
     public System.Action<TimeOfDay> OnTimeOfDayChanged;    // 🌅 시간대 변경 이벤트
     public System.Action OnDayEnded;                       // 🌅 하루 종료 이벤트
+    public System.Action OnDayStarted;                     // 🌅 하루 시작 이벤트
+    public System.Action OnGoalAchieved;                   // 🌅 목표 달성 이벤트
     
     void Awake()
     {
@@ -104,25 +136,51 @@ public class GameManager : MonoBehaviour
         InitializeGame();
     }
     
-void Start()
-{
-    LoadHighScore();
-    
-    // 💰 골드 시스템 확인 (새로 추가)
-    if (GoldManager.Instance == null)
+    void Start()
     {
-        Debug.LogWarning("⚠️ GoldManager가 씬에 없습니다! 골드 기능을 사용하려면 GoldManager를 추가하세요.");
+        // 컴포넌트 초기화
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+        
+        LoadHighScore();
+        
+        // 💰 골드 시스템 확인
+        if (GoldManager.Instance == null)
+        {
+            Debug.LogWarning("⚠️ GoldManager가 씬에 없습니다! 골드 기능을 사용하려면 GoldManager를 추가하세요.");
+        }
+        
+        // 💎 포인트 시스템 확인
+        if (PointManager.Instance == null)
+        {
+            Debug.LogWarning("⚠️ PointManager가 씬에 없습니다! 포인트 기능을 사용하려면 PointManager를 추가하세요.");
+        }
+        else
+        {
+            // PointManager 이벤트 연결
+            SetupPointManagerEvents();
+        }
+        
+        UpdateUI();
+        StartDay();
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log("🎮 GameManager 시작 완료!");
+        }
     }
-    
-    UpdateUI();
-    StartDay();
-}
-
     
     void Update()
     {
         UpdateGameTime();
         HandleInput();
+        UpdateAutoSave();
+        
+        if (showDebugInfo)
+        {
+            UpdateDebugInfo();
+        }
     }
     
     /// <summary>
@@ -135,6 +193,8 @@ void Start()
         currentTimeOfDay = TimeOfDay.Dawn;
         previousTimeOfDay = TimeOfDay.Dawn;
         dayGoalAchieved = false;
+        isGameStarted = false;
+        autoSaveTimer = 0f;
         
         // 🌅 하루 시스템 설정
         timeLimit = dayDurationInRealSeconds;
@@ -145,200 +205,204 @@ void Start()
         if (pausePanel != null) pausePanel.SetActive(false);
         if (dayEndPanel != null) dayEndPanel.SetActive(false);
         
-        Debug.Log("🎮 GameManager 초기화 완료! 하루 길이: " + dayDurationInRealSeconds + "초");
+        if (enableDebugLogs)
+        {
+            Debug.Log("🎮 GameManager 초기화 완료! 하루 길이: " + dayDurationInRealSeconds + "초");
+        }
     }
     
     /// <summary>
-    /// 🌅 하루 시작
+    /// PointManager 이벤트 연결
     /// </summary>
-public void StartDay()
-{
-    ChangeGameState(GameState.Playing);
-    
-    // 시간 초기화
-    gameTime = 0f;
-    currentTimeOfDay = TimeOfDay.Dawn;
-    previousTimeOfDay = TimeOfDay.Dawn;
-    dayGoalAchieved = false;
-    
-    // 💰 골드 시스템에 새로운 하루 시작 알림 (새로 추가)
-    if (GoldManager.Instance != null)
+    void SetupPointManagerEvents()
     {
-        // GoldManager 내부에서 이미 새로운 하루 시작 처리를 하므로 별도 호출 불필요
-        Debug.Log("💰 골드 시스템과 연동된 새로운 하루 시작");
+        if (PointManager.Instance != null)
+        {
+            PointManager.Instance.OnPointsChanged += OnPointsChanged;
+            PointManager.Instance.OnPerfectPress += OnPerfectPress;
+            PointManager.Instance.OnGoodPress += OnGoodPress;
+            PointManager.Instance.OnCustomerSatisfaction += OnCustomerSatisfaction;
+            PointManager.Instance.OnStreakBonus += OnStreakBonus;
+            PointManager.Instance.OnStreakUpdate += OnStreakUpdate;
+            
+            if (enableDebugLogs)
+            {
+                Debug.Log("💎 PointManager 이벤트 연결 완료");
+            }
+        }
     }
-    
-    // CustomerSpawner 시작
-    if (CustomerSpawner.Instance != null)
-    {
-        CustomerSpawner.Instance.StartSpawning();
-    }
-    
-    Debug.Log("🌅 새로운 하루 시작! 목표: " + dailyTargetScore + "점");
-    
-    // 시간대 변경 이벤트 발생
-    OnTimeOfDayChanged?.Invoke(currentTimeOfDay);
-}
-
     
     /// <summary>
-    /// 🌅 하루 종료
+    /// 🌅 하루 시작 - PointManager 연동
+    /// </summary>
+    public void StartDay()
+    {
+        ChangeGameState(GameState.Playing);
+        
+        // 시간 초기화
+        gameTime = 0f;
+        currentTimeOfDay = TimeOfDay.Dawn;
+        previousTimeOfDay = TimeOfDay.Dawn;
+        dayGoalAchieved = false;
+        isGameStarted = true;
+        
+        // 💰 골드 시스템에 새로운 하루 시작 알림
+        if (GoldManager.Instance != null)
+        {
+            if (enableDebugLogs)
+            {
+                Debug.Log("💰 골드 시스템과 연동된 새로운 하루 시작");
+            }
+        }
+        
+        // 💎 포인트 시스템에 새로운 하루 시작 알림
+        if (PointManager.Instance != null)
+        {
+            PointManager.Instance.StartNewDay();
+            if (enableDebugLogs)
+            {
+                Debug.Log("💎 포인트 시스템과 연동된 새로운 하루 시작");
+            }
+        }
+        
+        // CustomerSpawner 시작
+        if (CustomerSpawner.Instance != null)
+        {
+            CustomerSpawner.Instance.StartSpawning();
+        }
+        
+        // 사운드 재생
+        PlaySound(gameStartSound);
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log("🌅 새로운 하루 시작!");
+        }
+        
+        OnDayStarted?.Invoke();
+    }
+    
+    /// <summary>
+    /// 🌅 하루 종료 - PointManager 연동
     /// </summary>
     public void EndDay()
-{
-    if (currentState == GameState.DayEnded) return;
-    
-    ChangeGameState(GameState.DayEnded);
-    
-    // CustomerSpawner 중지
-    if (CustomerSpawner.Instance != null)
     {
-        CustomerSpawner.Instance.StopSpawning();
-    }
-    
-    // 목표 달성 확인
-    dayGoalAchieved = currentScore >= dailyTargetScore;
-    
-    // 최고 점수 업데이트
-    if (currentScore > highScore)
-    {
-        highScore = currentScore;
-        SaveHighScore();
-        Debug.Log("🎉 신기록 달성!");
-    }
-    
-    // 💰 골드 정보 출력 (새로 추가)
-    if (GoldManager.Instance != null)
-    {
-        int todaysEarnings = GoldManager.Instance.GetTodaysEarnings();
-        int totalGold = GoldManager.Instance.GetCurrentGold();
+        ChangeGameState(GameState.DayEnded);
         
-        Debug.Log($"💰 하루 골드 수익: {todaysEarnings:N0}원");
-        Debug.Log($"💰 총 보유 골드: {totalGold:N0}원");
-    }
-    
-    // 하루 종료 UI 표시
-    if (dayEndPanel != null) 
-    {
-        dayEndPanel.SetActive(true);
-    }
-    
-    Debug.Log($"🌙 하루 종료! 최종 점수: {currentScore}점 (목표: {dailyTargetScore}점) - {(dayGoalAchieved ? "성공" : "실패")}");
-    
-    OnDayEnded?.Invoke();
-    
-    // 💰 골드 시스템의 OnDayEnded 이벤트가 자동으로 호출되어 골드 누적 처리됨
-}
-    
-    /// <summary>
-    /// 🌅 현재 게임 시간을 실제 시간으로 변환 (6시~21시)
-    /// </summary>
-    public float GetCurrentGameHour()
-    {
-        float dayProgress = gameTime / dayDurationInRealSeconds;
-        float totalGameHours = gameEndHour - gameStartHour; // 15시간 (6시~21시)
-        return gameStartHour + (dayProgress * totalGameHours);
-    }
-    
-    /// <summary>
-    /// 🌅 현재 시간대 계산
-    /// </summary>
-    TimeOfDay CalculateTimeOfDay()
-    {
-        float currentHour = GetCurrentGameHour();
-        
-        if (currentHour < 7f)           return TimeOfDay.Dawn;        // 06:00-07:00
-        else if (currentHour < 11f)     return TimeOfDay.Morning;     // 07:00-11:00
-        else if (currentHour < 14f)     return TimeOfDay.Lunch;       // 11:00-14:00
-        else if (currentHour < 17f)     return TimeOfDay.Afternoon;   // 14:00-17:00
-        else if (currentHour < 20f)     return TimeOfDay.Evening;     // 17:00-20:00
-        else if (currentHour < 21f)     return TimeOfDay.Night;       // 20:00-21:00
-        else                            return TimeOfDay.Closed;      // 21:00~
-    }
-    
-    /// <summary>
-    /// 🌅 시간대별 한국어 이름 반환
-    /// </summary>
-    public string GetTimeOfDayKoreanName(TimeOfDay timeOfDay)
-    {
-        switch (timeOfDay)
+        // 💎 포인트 시스템 하루 종료 처리
+        if (PointManager.Instance != null)
         {
-            case TimeOfDay.Dawn:        return "새벽";
-            case TimeOfDay.Morning:     return "아침";
-            case TimeOfDay.Lunch:       return "점심";
-            case TimeOfDay.Afternoon:   return "오후";
-            case TimeOfDay.Evening:     return "저녁";
-            case TimeOfDay.Night:       return "밤";
-            case TimeOfDay.Closed:      return "마감";
-            default:                    return "알수없음";
+            PointManager.Instance.EndDay();
+            if (enableDebugLogs)
+            {
+                Debug.Log($"💎 포인트 시스템 하루 종료 - 오늘: {PointManager.Instance.GetTodaysPoints()}점, 총합: {PointManager.Instance.GetCurrentPoints()}점");
+            }
         }
-    }
-    
-    /// <summary>
-    /// 게임 일시정지
-    /// </summary>
-    public void PauseGame()
-    {
-        if (currentState == GameState.Playing)
-        {
-            ChangeGameState(GameState.Paused);
-            Time.timeScale = 0f;
-            
-            if (pausePanel != null) pausePanel.SetActive(true);
-            
-            Debug.Log("⏸️ 게임 일시정지");
-        }
-    }
-    
-    /// <summary>
-    /// 게임 재개
-    /// </summary>
-    public void ResumeGame()
-    {
-        if (currentState == GameState.Paused)
-        {
-            ChangeGameState(GameState.Playing);
-            Time.timeScale = 1f;
-            
-            if (pausePanel != null) pausePanel.SetActive(false);
-            
-            Debug.Log("▶️ 게임 재개");
-        }
-    }
-    
-    /// <summary>
-    /// 게임 종료 (기존 시스템 유지)
-    /// </summary>
-    public void GameOver()
-    {
-        if (currentState == GameState.GameOver) return;
         
-        ChangeGameState(GameState.GameOver);
+        // 최고 기록 업데이트 - PointManager 점수 포함
+        UpdateHighScore();
         
-        // CustomerSpawner 중지
+        // CustomerSpawner 정지
         if (CustomerSpawner.Instance != null)
         {
             CustomerSpawner.Instance.StopSpawning();
         }
         
-        // 최고 점수 업데이트
-        if (currentScore > highScore)
+        // 하루 종료 UI 표시
+        if (dayEndPanel != null)
         {
-            highScore = currentScore;
-            SaveHighScore();
-            Debug.Log("🎉 신기록 달성!");
+            dayEndPanel.SetActive(true);
+            UpdateDayEndUI();
+        }
+        
+        // 사운드 재생
+        PlaySound(dayEndSound);
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🌙 하루 종료! 최종 점수: {currentScore}점");
+        }
+        
+        OnDayEnded?.Invoke();
+    }
+    
+    /// <summary>
+    /// 최고 기록 업데이트
+    /// </summary>
+    void UpdateHighScore()
+    {
+        int totalScore = currentScore;
+        
+        // PointManager 점수 포함
+        if (PointManager.Instance != null)
+        {
+            totalScore += PointManager.Instance.GetTodaysPoints();
+        }
+        
+        if (totalScore > highScore)
+        {
+            highScore = totalScore;
+            PlayerPrefs.SetInt("HighScore", highScore);
+            
+            if (enableDebugLogs)
+            {
+                Debug.Log($"🏆 신기록! {highScore}점");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 하루 종료 UI 업데이트
+    /// </summary>
+    void UpdateDayEndUI()
+    {
+        // 하루 종료 패널에 통계 정보 표시
+        // 이 부분은 DayEndPanel UI 컴포넌트가 있다면 구현
+        if (enableDebugLogs)
+        {
+            Debug.Log("📊 하루 종료 UI 업데이트");
+        }
+    }
+    
+    /// <summary>
+    /// 게임 오버
+    /// </summary>
+    public void GameOver()
+    {
+        ChangeGameState(GameState.GameOver);
+        
+        // 💎 포인트 시스템 강제 저장
+        if (PointManager.Instance != null)
+        {
+            PointManager.Instance.SaveData();
+        }
+        
+        // 최고 기록 업데이트
+        UpdateHighScore();
+        
+        // CustomerSpawner 정지
+        if (CustomerSpawner.Instance != null)
+        {
+            CustomerSpawner.Instance.StopSpawning();
+            CustomerSpawner.Instance.ClearAllCustomers();
         }
         
         // 게임 오버 UI 표시
         if (gameOverPanel != null) gameOverPanel.SetActive(true);
         
-        Debug.Log($"💀 게임 오버! 최종 점수: {currentScore}점");
+        // 사운드 재생
+        PlaySound(gameOverSound);
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log($"💀 게임 오버! 최종 점수: {currentScore}점");
+        }
         
         OnGameOver?.Invoke();
     }
     
     /// <summary>
-    /// 게임 재시작
+    /// 게임 재시작 - PointManager 연동
     /// </summary>
     public void RestartGame()
     {
@@ -354,7 +418,14 @@ public void StartDay()
         gameTime = 0f;
         currentTimeOfDay = TimeOfDay.Dawn;
         dayGoalAchieved = false;
+        isGameStarted = false;
         Time.timeScale = 1f;
+        
+        // 💎 포인트 시스템 재시작
+        if (PointManager.Instance != null)
+        {
+            PointManager.Instance.StartNewDay();
+        }
         
         // UI 초기화
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
@@ -364,7 +435,10 @@ public void StartDay()
         UpdateUI();
         StartDay();
         
-        Debug.Log("🔄 게임 재시작!");
+        if (enableDebugLogs)
+        {
+            Debug.Log("🔄 게임 재시작!");
+        }
     }
     
     /// <summary>
@@ -375,7 +449,10 @@ public void StartDay()
         GameState oldState = currentState;
         currentState = newState;
         
-        Debug.Log($"🎮 게임 상태 변경: {oldState} → {newState}");
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🎮 게임 상태 변경: {oldState} → {newState}");
+        }
         
         OnGameStateChanged?.Invoke(newState);
     }
@@ -387,13 +464,16 @@ public void StartDay()
     {
         currentScore += points;
         
-        if (points > 0)
+        if (enableDebugLogs)
         {
-            Debug.Log($"💰 점수 획득: +{points} (총 {currentScore}점)");
-        }
-        else
-        {
-            Debug.Log($"💸 점수 감점: {points} (총 {currentScore}점)");
+            if (points > 0)
+            {
+                Debug.Log($"💰 점수 획득: +{points} (총 {currentScore}점)");
+            }
+            else
+            {
+                Debug.Log($"💸 점수 감점: {points} (총 {currentScore}점)");
+            }
         }
         
         UpdateUI();
@@ -408,11 +488,43 @@ public void StartDay()
     /// </summary>
     void CheckDailyGoal()
     {
-        if (!dayGoalAchieved && currentScore >= dailyTargetScore)
+        if (!dayGoalAchieved)
         {
-            dayGoalAchieved = true;
-            Debug.Log($"🏆 일일 목표 달성! ({dailyTargetScore}점)");
-            // TODO: 목표 달성 축하 효과 추가 (다음 단계)
+            int totalScore = currentScore;
+            
+            // PointManager 점수 포함
+            if (PointManager.Instance != null)
+            {
+                totalScore += PointManager.Instance.GetTodaysPoints();
+            }
+            
+            if (totalScore >= dailyTargetScore)
+            {
+                dayGoalAchieved = true;
+                
+                // 목표 달성 효과
+                ShowGoalAchievedEffect();
+                PlaySound(goalAchievedSound);
+                
+                if (enableDebugLogs)
+                {
+                    Debug.Log($"🏆 일일 목표 달성! ({dailyTargetScore}점)");
+                }
+                
+                OnGoalAchieved?.Invoke();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 목표 달성 효과 표시
+    /// </summary>
+    void ShowGoalAchievedEffect()
+    {
+        if (goalAchievedEffect != null)
+        {
+            GameObject effect = Instantiate(goalAchievedEffect, transform.position, Quaternion.identity);
+            Destroy(effect, goalEffectDuration);
         }
     }
     
@@ -432,19 +544,75 @@ public void StartDay()
             previousTimeOfDay = currentTimeOfDay;
             currentTimeOfDay = newTimeOfDay;
             
-            Debug.Log($"🌅 시간대 변경: {GetTimeOfDayKoreanName(previousTimeOfDay)} → {GetTimeOfDayKoreanName(currentTimeOfDay)}");
+            if (enableDebugLogs)
+            {
+                Debug.Log($"🌅 시간대 변경: {GetTimeOfDayKoreanName(previousTimeOfDay)} → {GetTimeOfDayKoreanName(currentTimeOfDay)}");
+            }
             
             OnTimeOfDayChanged?.Invoke(currentTimeOfDay);
+        }
+        
+        // 시간 경고 사운드 (마지막 1분)
+        if (gameTime >= dayDurationInRealSeconds - 60f && gameTime <= dayDurationInRealSeconds - 59f)
+        {
+            PlaySound(timeWarningSound);
         }
         
         // 🌅 하루 종료 확인
         if (gameTime >= dayDurationInRealSeconds || currentTimeOfDay == TimeOfDay.Closed)
         {
-            Debug.Log("⏰ 하루 시간 종료!");
+            if (enableDebugLogs)
+            {
+                Debug.Log("⏰ 하루 시간 종료!");
+            }
             EndDay();
         }
+    }
+    
+    /// <summary>
+    /// 시간대 계산
+    /// </summary>
+    TimeOfDay CalculateTimeOfDay()
+    {
+        float gameHours = gameStartHour + (gameTime / dayDurationInRealSeconds) * (gameEndHour - gameStartHour);
         
-        UpdateUI();
+        if (gameHours < 7f) return TimeOfDay.Dawn;
+        else if (gameHours < 11f) return TimeOfDay.Morning;
+        else if (gameHours < 14f) return TimeOfDay.Lunch;
+        else if (gameHours < 17f) return TimeOfDay.Afternoon;
+        else if (gameHours < 20f) return TimeOfDay.Evening;
+        else if (gameHours < 21f) return TimeOfDay.Night;
+        else return TimeOfDay.Closed;
+    }
+    
+    /// <summary>
+    /// 시간대 한국어 이름 반환
+    /// </summary>
+    string GetTimeOfDayKoreanName(TimeOfDay timeOfDay)
+    {
+        switch (timeOfDay)
+        {
+            case TimeOfDay.Dawn: return "새벽";
+            case TimeOfDay.Morning: return "아침";
+            case TimeOfDay.Lunch: return "점심";
+            case TimeOfDay.Afternoon: return "오후";
+            case TimeOfDay.Evening: return "저녁";
+            case TimeOfDay.Night: return "밤";
+            case TimeOfDay.Closed: return "마감";
+            default: return "알 수 없음";
+        }
+    }
+    
+    /// <summary>
+    /// 현재 게임 시간을 HH:MM 형태로 반환
+    /// </summary>
+    string GetCurrentTimeString()
+    {
+        float gameHours = gameStartHour + (gameTime / dayDurationInRealSeconds) * (gameEndHour - gameStartHour);
+        int hours = Mathf.FloorToInt(gameHours);
+        int minutes = Mathf.FloorToInt((gameHours - hours) * 60f);
+        
+        return $"{hours:D2}:{minutes:D2}";
     }
     
     /// <summary>
@@ -452,8 +620,8 @@ public void StartDay()
     /// </summary>
     void HandleInput()
     {
-        // ESC 키로 일시정지/재개
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // 일시정지/재개
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Escape))
         {
             if (currentState == GameState.Playing)
             {
@@ -465,167 +633,263 @@ public void StartDay()
             }
         }
         
-        // R 키로 재시작 (게임 오버 또는 하루 종료 시)
-        if (Input.GetKeyDown(KeyCode.R) && (currentState == GameState.GameOver || currentState == GameState.DayEnded))
+        // 디버그 시간 스킵
+        if (enableTimeSkip && Input.GetKeyDown(timeSkipKey))
         {
-            RestartGame();
+            gameTime += 60f; // 1분 스킵
+            if (enableDebugLogs)
+            {
+                Debug.Log("⏩ 시간 1분 스킵!");
+            }
+        }
+        
+        // 디버그 정보 토글
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            showDebugInfo = !showDebugInfo;
+        }
+        
+        // PointManager 디버그 정보
+        if (Input.GetKeyDown(KeyCode.F2) && PointManager.Instance != null)
+        {
+            PointManager.Instance.PrintDebugInfo();
         }
     }
     
     /// <summary>
-    /// 🌅 UI 업데이트 (하루 시간 시스템 포함)
+    /// 게임 일시정지
+    /// </summary>
+    public void PauseGame()
+    {
+        if (currentState == GameState.Playing)
+        {
+            ChangeGameState(GameState.Paused);
+            Time.timeScale = 0f;
+            
+            if (pausePanel != null)
+                pausePanel.SetActive(true);
+                
+            if (enableDebugLogs)
+            {
+                Debug.Log("⏸️ 게임 일시정지");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 게임 재개
+    /// </summary>
+    public void ResumeGame()
+    {
+        if (currentState == GameState.Paused)
+        {
+            ChangeGameState(GameState.Playing);
+            Time.timeScale = 1f;
+            
+            if (pausePanel != null)
+                pausePanel.SetActive(false);
+                
+            if (enableDebugLogs)
+            {
+                Debug.Log("▶️ 게임 재개");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 자동 저장 업데이트
+    /// </summary>
+    void UpdateAutoSave()
+    {
+        if (!autoSaveEnabled) return;
+        
+        autoSaveTimer += Time.deltaTime;
+        
+        if (autoSaveTimer >= autoSaveInterval)
+        {
+            autoSaveTimer = 0f;
+            AutoSave();
+        }
+    }
+    
+    /// <summary>
+    /// 자동 저장
+    /// </summary>
+    void AutoSave()
+    {
+        // 포인트 데이터 저장
+        if (PointManager.Instance != null)
+        {
+            PointManager.Instance.SaveData();
+        }
+        
+        // 최고 점수 저장
+        PlayerPrefs.SetInt("HighScore", highScore);
+        PlayerPrefs.Save();
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log("💾 자동 저장 완료");
+        }
+    }
+    
+    /// <summary>
+    /// 디버그 정보 업데이트
+    /// </summary>
+    void UpdateDebugInfo()
+    {
+        // 화면에 디버그 정보 표시 (OnGUI 사용 또는 UI 텍스트 업데이트)
+        // 이 부분은 필요에 따라 구현
+    }
+    
+    /// <summary>
+    /// UI 업데이트
     /// </summary>
     void UpdateUI()
     {
-        // 점수 업데이트
+        // 기본 점수 UI
         if (scoreText != null)
-        {
             scoreText.text = $"점수: {currentScore:N0}";
-        }
-        
+            
         if (highScoreText != null)
-        {
-            highScoreText.text = $"최고점: {highScore:N0}";
-        }
+            highScoreText.text = $"최고: {highScore:N0}";
         
-        // 🌅 하루 시간 UI 업데이트
-        UpdateDayTimeUI();
-        
-        // 기존 시간 업데이트 (호환성 유지)
+        // 시간 UI
         if (timeText != null)
         {
-            float remainingTime = Mathf.Max(0, dayDurationInRealSeconds - gameTime);
-            int minutes = Mathf.FloorToInt(remainingTime / 60);
-            int seconds = Mathf.FloorToInt(remainingTime % 60);
-            timeText.text = $"남은시간: {minutes:00}:{seconds:00}";
-            
-            // 🌅 시간이 부족하면 빨간색으로
-            if (remainingTime < 60f)
+            if (hasTimeLimit)
             {
-                timeText.color = Color.red;
+                float remainingTime = Mathf.Max(0, timeLimit - gameTime);
+                int minutes = Mathf.FloorToInt(remainingTime / 60f);
+                int seconds = Mathf.FloorToInt(remainingTime % 60f);
+                timeText.text = $"{minutes:D2}:{seconds:D2}";
             }
             else
             {
-                timeText.color = Color.white;
+                int minutes = Mathf.FloorToInt(gameTime / 60f);
+                int seconds = Mathf.FloorToInt(gameTime % 60f);
+                timeText.text = $"{minutes:D2}:{seconds:D2}";
             }
         }
         
-        // 진행도 슬라이더 업데이트
+        // 진행도 슬라이더
         if (progressSlider != null)
         {
-            progressSlider.value = gameTime / dayDurationInRealSeconds;
+            if (hasTimeLimit)
+                progressSlider.value = gameTime / timeLimit;
+            else
+                progressSlider.value = 0f;
         }
         
-        // 손님 통계 업데이트
-        UpdateCustomerStatisticsUI();
-    }
-    
-    /// <summary>
-    /// 🌅 하루 시간 관련 UI 업데이트
-    /// </summary>
-    void UpdateDayTimeUI()
-    {
-        // 현재 시간 표시 (HH:MM 형식)
+        // 🌅 하루 시간 UI
         if (currentTimeText != null)
-        {
-            float currentHour = GetCurrentGameHour();
-            int hour = Mathf.FloorToInt(currentHour);
-            int minute = Mathf.FloorToInt((currentHour - hour) * 60);
+            currentTimeText.text = GetCurrentTimeString();
             
-            currentTimeText.text = $"{hour:00}:{minute:00}";
-        }
-        
-        // 시간대 표시
         if (timeOfDayText != null)
-        {
-            string timeOfDayName = GetTimeOfDayKoreanName(currentTimeOfDay);
-            timeOfDayText.text = timeOfDayName;
+            timeOfDayText.text = GetTimeOfDayKoreanName(currentTimeOfDay);
             
-            // 🌅 시간대별 색상 설정
-            Color timeColor = GetTimeOfDayColor(currentTimeOfDay);
-            timeOfDayText.color = timeColor;
-        }
-        
-        // 일일 목표 표시
         if (dailyTargetText != null)
         {
-            string goalStatus = dayGoalAchieved ? "달성!" : $"{dailyTargetScore}점";
-            dailyTargetText.text = $"목표: {goalStatus}";
-            dailyTargetText.color = dayGoalAchieved ? Color.green : Color.white;
+            int totalScore = currentScore;
+            if (PointManager.Instance != null)
+                totalScore += PointManager.Instance.GetTodaysPoints();
+                
+            dailyTargetText.text = $"목표: {totalScore:N0}/{dailyTargetScore:N0}";
+            
+            if (dayGoalAchieved)
+                dailyTargetText.color = Color.green;
+            else
+                dailyTargetText.color = Color.white;
         }
         
-        // 하루 진행도 슬라이더
         if (dayProgressSlider != null)
-        {
             dayProgressSlider.value = gameTime / dayDurationInRealSeconds;
-        }
+        
+        // 💎 포인트 시스템 UI
+        UpdatePointUI();
+        
+        // 손님 통계 UI
+        UpdateCustomerStatsUI();
     }
     
     /// <summary>
-    /// 🌅 시간대별 색상 반환
+    /// 포인트 UI 업데이트
     /// </summary>
-    Color GetTimeOfDayColor(TimeOfDay timeOfDay)
+    void UpdatePointUI()
     {
-        switch (timeOfDay)
+        if (PointManager.Instance == null) return;
+        
+        if (currentPointsText != null)
+            currentPointsText.text = $"총 포인트: {PointManager.Instance.GetCurrentPoints():N0}";
+            
+        if (todaysPointsText != null)
+            todaysPointsText.text = $"오늘: {PointManager.Instance.GetTodaysPoints():N0}";
+            
+        if (streakStatusText != null)
+            streakStatusText.text = PointManager.Instance.GetStreakStatus();
+            
+        if (pointStreakInfoText != null)
         {
-            case TimeOfDay.Dawn:        return new Color(0.4f, 0.4f, 0.8f, 1f);    // 어두운 파랑
-            case TimeOfDay.Morning:     return new Color(1f, 0.8f, 0.4f, 1f);      // 주황
-            case TimeOfDay.Lunch:       return new Color(1f, 1f, 0.2f, 1f);        // 밝은 노랑
-            case TimeOfDay.Afternoon:   return new Color(0.2f, 0.8f, 1f, 1f);      // 하늘색
-            case TimeOfDay.Evening:     return new Color(1f, 0.4f, 0.2f, 1f);      // 주황-빨강
-            case TimeOfDay.Night:       return new Color(0.3f, 0.2f, 0.6f, 1f);    // 보라
-            case TimeOfDay.Closed:      return Color.gray;                         // 회색
-            default:                    return Color.white;
+            string streakInfo = "";
+            int perfectStreak = PointManager.Instance.GetPerfectStreak();
+            int satisfactionStreak = PointManager.Instance.GetSatisfactionStreak();
+            
+            if (perfectStreak > 1 || satisfactionStreak > 1)
+            {
+                streakInfo = "보너스 활성: ";
+                if (perfectStreak > 1)
+                    streakInfo += $"Perfect +{(perfectStreak - 1) * 10}%";
+                if (satisfactionStreak > 1)
+                {
+                    if (perfectStreak > 1) streakInfo += ", ";
+                    streakInfo += $"만족 +{(satisfactionStreak - 1) * 10}%";
+                }
+            }
+            else
+            {
+                streakInfo = "연속 보너스 없음";
+            }
+            
+            pointStreakInfoText.text = streakInfo;
         }
     }
     
     /// <summary>
     /// 손님 통계 UI 업데이트
     /// </summary>
-    void UpdateCustomerStatisticsUI()
+    void UpdateCustomerStatsUI()
     {
-        if (CustomerSpawner.Instance != null)
+        if (CustomerSpawner.Instance == null) return;
+        
+        if (totalCustomersText != null)
+            totalCustomersText.text = $"총 손님: {CustomerSpawner.Instance.GetTotalCustomersServed()}명";
+            
+        if (satisfiedCustomersText != null)
+            satisfiedCustomersText.text = $"만족: {CustomerSpawner.Instance.GetSatisfiedCustomers()}명";
+            
+        if (satisfactionRateText != null)
         {
-            var (total, satisfied, angry, satisfactionRate) = CustomerSpawner.Instance.GetStatistics();
+            float rate = CustomerSpawner.Instance.GetCustomerSatisfactionRate();
+            satisfactionRateText.text = $"만족도: {rate:P0}";
             
-            if (totalCustomersText != null)
-            {
-                totalCustomersText.text = $"총 손님: {total}명";
-            }
-            
-            if (satisfiedCustomersText != null)
-            {
-                satisfiedCustomersText.text = $"만족: {satisfied}명 / 불만: {angry}명";
-            }
-            
-            if (satisfactionRateText != null)
-            {
-                satisfactionRateText.text = $"만족도: {satisfactionRate:P1}";
-                
-                // 만족도에 따른 색상 변경
-                if (satisfactionRate >= 0.8f)
-                {
-                    satisfactionRateText.color = Color.green;
-                }
-                else if (satisfactionRate >= 0.6f)
-                {
-                    satisfactionRateText.color = Color.yellow;
-                }
-                else
-                {
-                    satisfactionRateText.color = Color.red;
-                }
-            }
+            if (rate >= 0.8f)
+                satisfactionRateText.color = Color.green;
+            else if (rate >= 0.6f)
+                satisfactionRateText.color = Color.yellow;
+            else
+                satisfactionRateText.color = Color.red;
         }
     }
     
     /// <summary>
-    /// 최고 점수 저장
+    /// 사운드 재생
     /// </summary>
-    void SaveHighScore()
+    void PlaySound(AudioClip clip)
     {
-        PlayerPrefs.SetInt("HighScore", highScore);
-        PlayerPrefs.Save();
+        if (audioSource != null && clip != null)
+        {
+            audioSource.PlayOneShot(clip);
+        }
     }
     
     /// <summary>
@@ -634,6 +898,55 @@ public void StartDay()
     void LoadHighScore()
     {
         highScore = PlayerPrefs.GetInt("HighScore", 0);
+    }
+    
+    // ===== PointManager 이벤트 핸들러들 =====
+    
+    void OnPointsChanged(int points)
+    {
+        UpdateUI(); // 포인트 변경 시 UI 업데이트
+    }
+    
+    void OnPerfectPress(int points)
+    {
+        // Perfect 누르기 특별 효과 (필요시)
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🔥 Perfect 처리 완료: +{points}점");
+        }
+    }
+    
+    void OnGoodPress(int points)
+    {
+        // Good 누르기 효과 (필요시)
+        if (enableDebugLogs)
+        {
+            Debug.Log($"👍 Good 처리 완료: +{points}점");
+        }
+    }
+    
+    void OnCustomerSatisfaction(int points)
+    {
+        // 손님 만족 특별 효과 (필요시)
+        if (enableDebugLogs)
+        {
+            Debug.Log($"😊 손님 만족 처리 완료: +{points}점");
+        }
+    }
+    
+    void OnStreakBonus(int streakCount)
+    {
+        // 연속 보너스 특별 효과
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🔥 연속 보너스 발생! 연속 {streakCount}회");
+        }
+    }
+    
+    void OnStreakUpdate(string streakStatus)
+    {
+        // 연속 상태 업데이트
+        UpdateUI(); // UI 즉시 업데이트
     }
     
     // ===== 🌅 공개 접근자 메서드들 =====
@@ -679,6 +992,22 @@ public void StartDay()
     }
     
     /// <summary>
+    /// 현재 게임 시간 반환 (초)
+    /// </summary>
+    public float GetGameTime()
+    {
+        return gameTime;
+    }
+    
+    /// <summary>
+    /// 게임 시작 여부 반환
+    /// </summary>
+    public bool IsGameStarted()
+    {
+        return isGameStarted;
+    }
+    
+    /// <summary>
     /// 게임 설정 (확장된 버전)
     /// </summary>
     public void SetGameSettings(float newDayDuration, int newDailyTarget)
@@ -688,6 +1017,29 @@ public void StartDay()
         dailyTargetScore = newDailyTarget;
         hasTimeLimit = true;
         
-        Debug.Log($"⚙️ 게임 설정 변경: 하루길이 {dayDurationInRealSeconds}초, 일일목표 {dailyTargetScore}점");
+        if (enableDebugLogs)
+        {
+            Debug.Log($"⚙️ 게임 설정 변경: 하루길이 {dayDurationInRealSeconds}초, 일일목표 {dailyTargetScore}점");
+        }
+    }
+    
+    void OnDestroy()
+    {
+        // 이벤트 연결 해제
+        if (PointManager.Instance != null)
+        {
+            PointManager.Instance.OnPointsChanged -= OnPointsChanged;
+            PointManager.Instance.OnPerfectPress -= OnPerfectPress;
+            PointManager.Instance.OnGoodPress -= OnGoodPress;
+            PointManager.Instance.OnCustomerSatisfaction -= OnCustomerSatisfaction;
+            PointManager.Instance.OnStreakBonus -= OnStreakBonus;
+            PointManager.Instance.OnStreakUpdate -= OnStreakUpdate;
+        }
+        
+        // 자동 저장
+        if (autoSaveEnabled)
+        {
+            AutoSave();
+        }
     }
 }

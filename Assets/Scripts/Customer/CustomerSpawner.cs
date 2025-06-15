@@ -1,5 +1,5 @@
 // Assets/Scripts/Customer/CustomerSpawner.cs
-// 🔧 손님 이미지 표시 문제 완전 해결 버전
+// 🔧 손님 이미지 표시 문제 완전 해결 + 누락 메서드 추가 버전
 
 using UnityEngine;
 using System.Collections;
@@ -398,7 +398,73 @@ public class CustomerSpawner : MonoBehaviour
         }
     }
     
-    // ===== 사운드 효과 =====
+    // ===== 📊 통계 접근자 메서드들 (GameManager에서 호출됨) =====
+    
+    /// <summary>
+    /// 총 서빙한 손님 수 반환
+    /// </summary>
+    public int GetTotalCustomersServed()
+    {
+        return totalCustomersServed;
+    }
+    
+    /// <summary>
+    /// 만족한 손님 수 반환
+    /// </summary>
+    public int GetSatisfiedCustomers()
+    {
+        return satisfiedCustomers;
+    }
+    
+    /// <summary>
+    /// 화난 손님 수 반환
+    /// </summary>
+    public int GetAngryCustomers()
+    {
+        return angryCustomers;
+    }
+    
+    /// <summary>
+    /// 손님 만족도 비율 반환 (0.0 ~ 1.0)
+    /// </summary>
+    public float GetCustomerSatisfactionRate()
+    {
+        return customerSatisfactionRate;
+    }
+    
+    // ===== 🎭 손님 상태 변경 콜백 메서드들 (Customer에서 호출됨) =====
+    
+    /// <summary>
+    /// 손님이 만족하며 떠날 때 호출
+    /// </summary>
+    public void OnCustomerLeaveSatisfied()
+    {
+        // 주의: 이 메서드는 OnCustomerExit에서 이미 통계가 업데이트되므로 
+        // 중복 업데이트를 방지하기 위해 사운드만 재생
+        PlaySatisfactionSound();
+        
+        if (enableDebugLogs)
+        {
+            DebugLog($"😊 손님 만족 퇴장 신호 수신!");
+        }
+    }
+    
+    /// <summary>
+    /// 손님이 화내며 떠날 때 호출
+    /// </summary>
+    public void OnCustomerLeaveAngry()
+    {
+        // 주의: 이 메서드는 OnCustomerExit에서 이미 통계가 업데이트되므로 
+        // 중복 업데이트를 방지하기 위해 사운드만 재생
+        PlayAngrySound();
+        
+        if (enableDebugLogs)
+        {
+            DebugLog($"😡 손님 분노 퇴장 신호 수신!");
+        }
+    }
+    
+    // ===== 🔊 사운드 효과 =====
     
     public void PlayEnterSound()
     {
@@ -513,6 +579,185 @@ public class CustomerSpawner : MonoBehaviour
         DebugLog("📊 통계 리셋 완료");
     }
     
+    // ===== 📈 추가 통계 및 유틸리티 메서드들 =====
+    
+    /// <summary>
+    /// 현재 활성 손님들의 상태 요약 반환
+    /// </summary>
+    public string GetActiveCustomersStatus()
+    {
+        int activeCount = GetActiveCustomerCount();
+        if (activeCount == 0)
+        {
+            return "활성 손님 없음";
+        }
+        
+        string status = $"활성 손님 {activeCount}명: ";
+        for (int i = 0; i < activeCustomers.Length; i++)
+        {
+            if (activeCustomers[i] != null)
+            {
+                Customer customer = activeCustomers[i];
+                status += $"[{customer.customerName}: {customer.GetCurrentState()}] ";
+            }
+        }
+        
+        return status;
+    }
+    
+    /// <summary>
+    /// 통계 요약 문자열 반환
+    /// </summary>
+    public string GetStatisticsSummary()
+    {
+        if (totalCustomersServed == 0)
+        {
+            return "아직 손님이 없습니다.";
+        }
+        
+        return $"총 {totalCustomersServed}명 서빙 | 만족: {satisfiedCustomers}명 | 불만: {angryCustomers}명 | 만족도: {customerSatisfactionRate:P1}";
+    }
+    
+    /// <summary>
+    /// 특정 카운터의 손님 정보 반환
+    /// </summary>
+    public Customer GetCustomerAtCounter(int counterIndex)
+    {
+        if (counterIndex >= 0 && counterIndex < maxCustomers)
+        {
+            return activeCustomers[counterIndex];
+        }
+        return null;
+    }
+    
+    /// <summary>
+    /// 모든 활성 손님 목록 반환
+    /// </summary>
+    public List<Customer> GetAllActiveCustomers()
+    {
+        List<Customer> customers = new List<Customer>();
+        
+        foreach (Customer customer in activeCustomers)
+        {
+            if (customer != null)
+            {
+                customers.Add(customer);
+            }
+        }
+        
+        return customers;
+    }
+    
+    /// <summary>
+    /// 현재 난이도 레벨 반환
+    /// </summary>
+    public int GetCurrentDifficultyLevel()
+    {
+        return totalCustomersServed / difficultyIncreaseInterval;
+    }
+    
+    /// <summary>
+    /// 현재 계산된 대기 시간 반환
+    /// </summary>
+    public float GetCurrentWaitTime()
+    {
+        return CalculateWaitTime();
+    }
+    
+    /// <summary>
+    /// 스폰 간격 범위 반환
+    /// </summary>
+    public (float min, float max) GetSpawnInterval()
+    {
+        return (minSpawnInterval, maxSpawnInterval);
+    }
+    
+    /// <summary>
+    /// 카운터 점유 상태 반환
+    /// </summary>
+    public bool[] GetCounterOccupiedStatus()
+    {
+        return (bool[])counterOccupied.Clone();
+    }
+    
+    /// <summary>
+    /// 사용 가능한 카운터 인덱스 목록 반환
+    /// </summary>
+    public List<int> GetAvailableCounterIndices()
+    {
+        return new List<int>(availableCounters);
+    }
+    
+    // ===== 🛠️ 디버그 및 테스트 메서드들 =====
+    
+    /// <summary>
+    /// 특정 손님을 강제로 만족시키기 (디버그/테스트용)
+    /// </summary>
+    [ContextMenu("Force Satisfy All Customers")]
+    public void ForceSatisfyAllCustomers()
+    {
+        if (!enableDebugLogs) return;
+        
+        foreach (Customer customer in activeCustomers)
+        {
+            if (customer != null && customer.GetCurrentState() == Customer.CustomerState.Waiting)
+            {
+                customer.LeaveSatisfied();
+            }
+        }
+        
+        DebugLog("🧪 모든 활성 손님을 강제로 만족시켰습니다.");
+    }
+    
+    /// <summary>
+    /// 특정 손님을 강제로 화나게 하기 (디버그/테스트용)
+    /// </summary>
+    [ContextMenu("Force Anger All Customers")]
+    public void ForceAngerAllCustomers()
+    {
+        if (!enableDebugLogs) return;
+        
+        foreach (Customer customer in activeCustomers)
+        {
+            if (customer != null && customer.GetCurrentState() == Customer.CustomerState.Waiting)
+            {
+                customer.LeaveAngry();
+            }
+        }
+        
+        DebugLog("🧪 모든 활성 손님을 강제로 화나게 했습니다.");
+    }
+    
+    /// <summary>
+    /// 손님 스폰 강제 실행 (디버그/테스트용)
+    /// </summary>
+    [ContextMenu("Force Spawn Customer Now")]
+    public void ForceSpawnCustomerNow()
+    {
+        if (enableDebugLogs)
+        {
+            DebugLog("🧪 강제 손님 스폰 실행!");
+            SpawnCustomer();
+        }
+    }
+    
+    /// <summary>
+    /// 통계 초기화 및 새 게임 준비
+    /// </summary>
+    public void PrepareNewGame()
+    {
+        // 모든 손님 정리
+        ClearAllCustomers();
+        
+        // 통계 리셋
+        ResetStatistics();
+        
+        // 스폰 중지
+        StopSpawning();
+        
+        DebugLog("🎮 새 게임 준비 완료!");
+    }
+    
     /// <summary>
     /// 디버그 정보 출력
     /// </summary>
@@ -548,6 +793,32 @@ public class CustomerSpawner : MonoBehaviour
         else
         {
             Debug.Log("카운터 위치가 설정되지 않음!");
+        }
+    }
+    
+    /// <summary>
+    /// 상세 디버그 정보 출력
+    /// </summary>
+    [ContextMenu("Print Detailed Debug Info")]
+    public void PrintDetailedDebugInfo()
+    {
+        Debug.Log("=== CustomerSpawner 상세 정보 ===");
+        Debug.Log($"📊 통계: {GetStatisticsSummary()}");
+        Debug.Log($"🎚️ 난이도 레벨: {GetCurrentDifficultyLevel()}");
+        Debug.Log($"⏰ 현재 대기시간: {GetCurrentWaitTime():F1}초");
+        Debug.Log($"🕐 스폰 간격: {minSpawnInterval:F1}초 ~ {maxSpawnInterval:F1}초");
+        Debug.Log($"👥 {GetActiveCustomersStatus()}");
+        Debug.Log($"📍 카운터 점유: {string.Join(", ", counterOccupied.Select((occupied, i) => $"{i}:{(occupied ? "점유" : "비움")}"))}");
+        Debug.Log($"🔄 스폰 상태: {(spawnCoroutine != null ? "진행 중" : "중지됨")}");
+        
+        // 활성 손님들의 상세 정보
+        for (int i = 0; i < activeCustomers.Length; i++)
+        {
+            if (activeCustomers[i] != null)
+            {
+                Customer customer = activeCustomers[i];
+                Debug.Log($"   손님 {i}: {customer.customerName} - {customer.GetCurrentState()} - 대기: {customer.GetCurrentWaitTime():F1}/{customer.GetMaxWaitTime():F1}초");
+            }
         }
     }
     
