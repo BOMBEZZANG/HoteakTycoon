@@ -3110,9 +3110,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   customerPrefab: {fileID: 1697865906646941406, guid: 528f0818ec731784a8f6a4221e68090c, type: 3}
-  maxCustomers: 1
-  minSpawnInterval: 3
-  maxSpawnInterval: 8
+  maxCustomers: 3
+  minSpawnInterval: 2
+  maxSpawnInterval: 5
   autoSpawn: 1
   counterPositions:
   - {fileID: 1562449876}
@@ -5207,6 +5207,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63622e872cf457a48b2e1353809b8f09, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  returnToHomeOnGameOver: 1
+  returnToHomeOnDayEnd: 1
+  returnToHomeDelay: 3
+  returnToHomeButton: {fileID: 0}
+  restartGameButton: {fileID: 0}
   currentState: 1
   dayDurationInRealSeconds: 60
   currentTimeOfDay: 0

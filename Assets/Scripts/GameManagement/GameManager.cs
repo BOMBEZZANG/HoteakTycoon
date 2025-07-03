@@ -19,10 +19,15 @@ public class GameManager : MonoBehaviour
     }
     [Header("🏠 씬 관리")]
 public bool returnToHomeOnGameOver = true;      // 게임 오버 시 홈으로 돌아가기
-public bool returnToHomeOnDayEnd = true;        // 하루 종료 시 홈으로 돌아가기
+public bool returnToHomeOnDayEnd = false;       // 하루 종료 시 홈으로 돌아가기 (기본값 false로 변경)
 public float returnToHomeDelay = 3f;            // 홈으로 돌아가는 지연 시간
 public Button returnToHomeButton;               // 홈으로 돌아가기 버튼
 public Button restartGameButton;                // 게임 재시작 버튼
+
+[Header("🌅 다음 날 시스템")]
+public Button startNextDayButton;               // 다음 날 시작 버튼
+public bool enableNextDayMode = true;           // 다음 날 모드 활성화
+public int currentDay = 1;                      // 현재 날짜
     /// <summary>
     /// 🌅 하루 시간대 구분
     /// </summary>
@@ -71,6 +76,7 @@ public Button restartGameButton;                // 게임 재시작 버튼
     [Header("🌅 하루 시간 UI")]
     public TextMeshProUGUI currentTimeText;        // 현재 시간 표시 (HH:MM)
     public TextMeshProUGUI timeOfDayText;          // 시간대 표시 (아침, 점심 등)
+    public TextMeshProUGUI currentDayText;         // 현재 날짜 표시 (Day X)
     public TextMeshProUGUI dailyTargetText;       // 일일 목표 표시
     public Slider dayProgressSlider;              // 하루 진행도 슬라이더
     public GameObject dayEndPanel;                // 하루 종료 패널
@@ -191,7 +197,80 @@ public Button restartGameButton;                // 게임 재시작 버튼
         {
             restartGameButton.onClick.AddListener(RestartGame);
         }
+
+        // 🌅 다음 날 시작 버튼 설정
+        if (startNextDayButton != null)
+        {
+            startNextDayButton.onClick.AddListener(StartNextDay);
+
+            // 초기에는 비활성화 (하루 종료 시에만 활성화)
+            startNextDayButton.gameObject.SetActive(false);
+        }
     }
+
+/// <summary>
+/// 🌅 다음 날 시작
+/// </summary>
+public void StartNextDay()
+{
+    if (!enableNextDayMode)
+    {
+        Debug.LogWarning("다음 날 모드가 비활성화되어 있습니다!");
+        return;
+    }
+
+    // 현재 날짜 증가
+    currentDay++;
+
+    Debug.Log($"🌅 Day {currentDay} 시작!");
+
+    // 하루 종료 UI 숨기기
+    if (dayEndPanel != null)
+    {
+        dayEndPanel.SetActive(false);
+    }
+
+    // 다음 날 버튼들 숨기기
+    if (startNextDayButton != null)
+    {
+        startNextDayButton.gameObject.SetActive(false);
+    }
+
+    if (returnToHomeButton != null)
+    {
+        returnToHomeButton.gameObject.SetActive(false);
+    }
+
+    // 모든 손님 제거
+    if (CustomerSpawner.Instance != null)
+    {
+        CustomerSpawner.Instance.ClearAllCustomers();
+        CustomerSpawner.Instance.ResetStatistics();
+    }
+
+    // 게임 상태 재설정 (점수는 유지)
+    gameTime = 0f;
+    currentTimeOfDay = TimeOfDay.Dawn;
+    dayGoalAchieved = false;
+    isGameStarted = false;
+
+    // 💎 포인트 시스템에 새로운 하루 시작 알림
+    if (PointManager.Instance != null)
+    {
+        PointManager.Instance.StartNewDay();
+    }
+
+    // UI 업데이트
+    UpdateUI();
+
+    // 새로운 하루 시작
+    StartDay();
+
+    if (enableDebugLogs)
+    {
+        Debug.Log($"🎮 Day {currentDay} 시작 완료!");
+    }
+}
 
 public void ReturnToHome()
 {
@@ -398,6 +477,12 @@ void ShowReturnToHomeButton()
         UpdateDayEndUI();
     }
     
+    // 🌅 다음 날 시작 버튼 표시 (활성화된 경우)
+    if (enableNextDayMode && startNextDayButton != null)
+    {
+        startNextDayButton.gameObject.SetActive(true);
+    }
+    
     // 🔧 홈으로 돌아가기 버튼 표시
     ShowReturnToHomeButton();
     
@@ -406,12 +491,16 @@ void ShowReturnToHomeButton()
     
     if (enableDebugLogs)
     {
-        Debug.Log($"🌙 하루 종료! 최종 점수: {currentScore}점");
+        Debug.Log($"🌙 Day {currentDay} 종료! 최종 점수: {currentScore}점");
+        if (enableNextDayMode)
+        {
+            Debug.Log("🌅 다음 날 시작 버튼이 활성화되었습니다!");
+        }
     }
     
     OnDayEnded?.Invoke();
     
-    // 🔧 자동으로 홈으로 돌아가기 (설정된 경우)
+    // 🔧 자동으로 홈으로 돌아가기 (설정된 경우 - 기본적으로 비활성화됨)
     if (returnToHomeOnDayEnd)
     {
         StartCoroutine(AutoReturnToHome());
@@ -450,10 +539,24 @@ void ShowReturnToHomeButton()
     void UpdateDayEndUI()
     {
         // 하루 종료 패널에 통계 정보 표시
-        // 이 부분은 DayEndPanel UI 컴포넌트가 있다면 구현
         if (enableDebugLogs)
         {
             Debug.Log("📊 하루 종료 UI 업데이트");
+            Debug.Log($"🔧 UI 버튼 상태 확인:");
+            Debug.Log($"   dayEndPanel: {(dayEndPanel != null ? "연결됨" : "❌ 없음")}");
+            Debug.Log($"   startNextDayButton: {(startNextDayButton != null ? "연결됨" : "❌ 없음")}");
+            Debug.Log($"   returnToHomeButton: {(returnToHomeButton != null ? "연결됨" : "❌ 없음")}");
+            Debug.Log($"   enableNextDayMode: {enableNextDayMode}");
+        }
+        
+        // UI 버튼이 없는 경우 콘솔 안내 메시지 표시
+        if (startNextDayButton == null || returnToHomeButton == null)
+        {
+            Debug.LogWarning("⚠️ UI 버튼이 설정되지 않았습니다!");
+            Debug.LogWarning("💡 키보드 단축키를 사용하세요:");
+            Debug.LogWarning("   🌅 N키 - 다음 날 시작");
+            Debug.LogWarning("   🏠 H키 - 홈으로 돌아가기");
+            Debug.LogWarning("   🔄 R키 - 게임 재시작");
         }
     }
     
@@ -521,6 +624,7 @@ void ShowReturnToHomeButton()
     currentScore = 0;
     gameTime = 0f;
     currentTimeOfDay = TimeOfDay.Dawn;
+    currentDay = 1;                     // 🌅 Day 1로 재설정
     dayGoalAchieved = false;
     isGameStarted = false;
     Time.timeScale = 1f;
@@ -755,6 +859,12 @@ void ShowReturnToHomeButton()
             RestartGame();
         }
         
+        // 🌅 N 키로 다음 날 시작 (하루 종료 시)
+        if (Input.GetKeyDown(KeyCode.N) && currentState == GameState.DayEnded && enableNextDayMode)
+        {
+            StartNextDay();
+        }
+        
         // 🔧 H 키로 홈으로 돌아가기 (게임 오버나 하루 종료 시)
         if (Input.GetKeyDown(KeyCode.H) && (currentState == GameState.GameOver || currentState == GameState.DayEnded))
         {
@@ -868,6 +978,53 @@ void ShowReturnToHomeButton()
         // 화면에 디버그 정보 표시 (OnGUI 사용 또는 UI 텍스트 업데이트)
         // 이 부분은 필요에 따라 구현
     }
+
+    /// <summary>
+    /// GUI 시스템 (UI 버튼이 없을 때 대체용)
+    /// </summary>
+    void OnGUI()
+    {
+        // 하루 종료 시에만 표시
+        if (currentState == GameState.DayEnded)
+        {
+            // UI 버튼이 설정되지 않은 경우에만 OnGUI 버튼 표시
+            bool showGUIButtons = (startNextDayButton == null || returnToHomeButton == null || 
+                                   dayEndPanel == null || !dayEndPanel.activeInHierarchy);
+
+            if (showGUIButtons)
+            {
+                // 화면 중앙에 버튼들 배치
+                float buttonWidth = 200f;
+                float buttonHeight = 50f;
+                float screenCenterX = Screen.width / 2f - buttonWidth / 2f;
+                float screenCenterY = Screen.height / 2f;
+
+                // 배경 박스
+                GUI.Box(new Rect(screenCenterX - 20, screenCenterY - 100, buttonWidth + 40, 200), $"Day {currentDay} 종료!");
+
+                // 다음 날 시작 버튼
+                if (enableNextDayMode)
+                {
+                    if (GUI.Button(new Rect(screenCenterX, screenCenterY - 50, buttonWidth, buttonHeight), 
+                                   $"🌅 Start Day {currentDay + 1}\n(N키)"))
+                    {
+                        StartNextDay();
+                    }
+                }
+
+                // 홈으로 돌아가기 버튼
+                if (GUI.Button(new Rect(screenCenterX, screenCenterY + 10, buttonWidth, buttonHeight), 
+                               "🏠 Return to Home\n(H키)"))
+                {
+                    ReturnToHome();
+                }
+
+                // 안내 텍스트
+                GUI.Label(new Rect(screenCenterX - 50, screenCenterY + 80, buttonWidth + 100, 30), 
+                          "키보드: N=다음날, H=홈, R=재시작");
+            }
+        }
+    }
     
     /// <summary>
     /// UI 업데이트
@@ -914,6 +1071,9 @@ void ShowReturnToHomeButton()
             
         if (timeOfDayText != null)
             timeOfDayText.text = GetTimeOfDayKoreanName(currentTimeOfDay);
+
+        if (currentDayText != null)
+            currentDayText.text = $"Day {currentDay}";
             
         if (dailyTargetText != null)
         {
@@ -1132,6 +1292,14 @@ void ShowReturnToHomeButton()
     public bool IsGameStarted()
     {
         return isGameStarted;
+    }
+
+    /// <summary>
+    /// 🌅 현재 날짜 반환
+    /// </summary>
+    public int GetCurrentDay()
+    {
+        return currentDay;
     }
     
     /// <summary>
