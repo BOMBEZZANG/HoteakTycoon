@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
@@ -16,7 +17,12 @@ public class GameManager : MonoBehaviour
         DayEnded,       // 하루 종료
         GameOver        // 게임 오버
     }
-    
+    [Header("🏠 씬 관리")]
+public bool returnToHomeOnGameOver = true;      // 게임 오버 시 홈으로 돌아가기
+public bool returnToHomeOnDayEnd = true;        // 하루 종료 시 홈으로 돌아가기
+public float returnToHomeDelay = 3f;            // 홈으로 돌아가는 지연 시간
+public Button returnToHomeButton;               // 홈으로 돌아가기 버튼
+public Button restartGameButton;                // 게임 재시작 버튼
     /// <summary>
     /// 🌅 하루 시간대 구분
     /// </summary>
@@ -161,7 +167,8 @@ public class GameManager : MonoBehaviour
             // PointManager 이벤트 연결
             SetupPointManagerEvents();
         }
-        
+        SetupReturnToHomeButton();
+
         UpdateUI();
         StartDay();
         
@@ -170,7 +177,83 @@ public class GameManager : MonoBehaviour
             Debug.Log("🎮 GameManager 시작 완료!");
         }
     }
+    void SetupReturnToHomeButton()
+    {
+        if (returnToHomeButton != null)
+        {
+            returnToHomeButton.onClick.AddListener(ReturnToHome);
+
+            // 초기에는 비활성화 (게임 오버나 하루 종료 시에만 활성화)
+            returnToHomeButton.gameObject.SetActive(false);
+        }
+
+        if (restartGameButton != null)
+        {
+            restartGameButton.onClick.AddListener(RestartGame);
+        }
+    }
+
+public void ReturnToHome()
+{
+    Debug.Log("🏠 홈 씬으로 돌아가기");
     
+    // 💎 포인트 시스템 강제 저장
+    if (PointManager.Instance != null)
+    {
+        PointManager.Instance.SaveData();
+    }
+    
+    // 최고 기록 저장
+    PlayerPrefs.SetInt("HighScore", highScore);
+    PlayerPrefs.Save();
+    
+    // CustomerSpawner 정지
+    if (CustomerSpawner.Instance != null)
+    {
+        CustomerSpawner.Instance.StopSpawning();
+        CustomerSpawner.Instance.ClearAllCustomers();
+    }
+    
+    // 씬 전환
+    if (SceneTransitionManager.Instance != null)
+    {
+        SceneTransitionManager.Instance.LoadHomeScene();
+    }
+    else
+    {
+        Debug.LogError("SceneTransitionManager가 없습니다!");
+        // fallback: 직접 씬 로드
+        UnityEngine.SceneManagement.SceneManager.LoadScene("HomeScene");
+    }
+}
+
+/// <summary>
+/// 홈으로 돌아가기 버튼 표시
+/// </summary>
+void ShowReturnToHomeButton()
+{
+    if (returnToHomeButton != null)
+    {
+        returnToHomeButton.gameObject.SetActive(true);
+    }
+}
+
+    /// <summary>
+    /// 자동으로 홈으로 돌아가기 (지연 시간 후)
+    /// </summary>
+    IEnumerator AutoReturnToHome()
+    {
+        yield return new WaitForSeconds(returnToHomeDelay);
+
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🏠 {returnToHomeDelay}초 후 자동으로 홈으로 돌아갑니다...");
+        }
+
+        ReturnToHome();
+    }
+
+
     void Update()
     {
         UpdateGameTime();
@@ -286,45 +369,55 @@ public class GameManager : MonoBehaviour
     /// 🌅 하루 종료 - PointManager 연동
     /// </summary>
     public void EndDay()
+{
+    ChangeGameState(GameState.DayEnded);
+    
+    // 💎 포인트 시스템 하루 종료 처리
+    if (PointManager.Instance != null)
     {
-        ChangeGameState(GameState.DayEnded);
-        
-        // 💎 포인트 시스템 하루 종료 처리
-        if (PointManager.Instance != null)
-        {
-            PointManager.Instance.EndDay();
-            if (enableDebugLogs)
-            {
-                Debug.Log($"💎 포인트 시스템 하루 종료 - 오늘: {PointManager.Instance.GetTodaysPoints()}점, 총합: {PointManager.Instance.GetCurrentPoints()}점");
-            }
-        }
-        
-        // 최고 기록 업데이트 - PointManager 점수 포함
-        UpdateHighScore();
-        
-        // CustomerSpawner 정지
-        if (CustomerSpawner.Instance != null)
-        {
-            CustomerSpawner.Instance.StopSpawning();
-        }
-        
-        // 하루 종료 UI 표시
-        if (dayEndPanel != null)
-        {
-            dayEndPanel.SetActive(true);
-            UpdateDayEndUI();
-        }
-        
-        // 사운드 재생
-        PlaySound(dayEndSound);
-        
+        PointManager.Instance.EndDay();
         if (enableDebugLogs)
         {
-            Debug.Log($"🌙 하루 종료! 최종 점수: {currentScore}점");
+            Debug.Log($"💎 포인트 시스템 하루 종료 - 오늘: {PointManager.Instance.GetTodaysPoints()}점, 총합: {PointManager.Instance.GetCurrentPoints()}점");
         }
-        
-        OnDayEnded?.Invoke();
     }
+    
+    // 최고 기록 업데이트
+    UpdateHighScore();
+    
+    // CustomerSpawner 정지
+    if (CustomerSpawner.Instance != null)
+    {
+        CustomerSpawner.Instance.StopSpawning();
+    }
+    
+    // 하루 종료 UI 표시
+    if (dayEndPanel != null)
+    {
+        dayEndPanel.SetActive(true);
+        UpdateDayEndUI();
+    }
+    
+    // 🔧 홈으로 돌아가기 버튼 표시
+    ShowReturnToHomeButton();
+    
+    // 사운드 재생
+    PlaySound(dayEndSound);
+    
+    if (enableDebugLogs)
+    {
+        Debug.Log($"🌙 하루 종료! 최종 점수: {currentScore}점");
+    }
+    
+    OnDayEnded?.Invoke();
+    
+    // 🔧 자동으로 홈으로 돌아가기 (설정된 경우)
+    if (returnToHomeOnDayEnd)
+    {
+        StartCoroutine(AutoReturnToHome());
+    }
+}
+
     
     /// <summary>
     /// 최고 기록 업데이트
@@ -368,79 +461,95 @@ public class GameManager : MonoBehaviour
     /// 게임 오버
     /// </summary>
     public void GameOver()
+{
+    ChangeGameState(GameState.GameOver);
+    
+    // 💎 포인트 시스템 강제 저장
+    if (PointManager.Instance != null)
     {
-        ChangeGameState(GameState.GameOver);
-        
-        // 💎 포인트 시스템 강제 저장
-        if (PointManager.Instance != null)
-        {
-            PointManager.Instance.SaveData();
-        }
-        
-        // 최고 기록 업데이트
-        UpdateHighScore();
-        
-        // CustomerSpawner 정지
-        if (CustomerSpawner.Instance != null)
-        {
-            CustomerSpawner.Instance.StopSpawning();
-            CustomerSpawner.Instance.ClearAllCustomers();
-        }
-        
-        // 게임 오버 UI 표시
-        if (gameOverPanel != null) gameOverPanel.SetActive(true);
-        
-        // 사운드 재생
-        PlaySound(gameOverSound);
-        
-        if (enableDebugLogs)
-        {
-            Debug.Log($"💀 게임 오버! 최종 점수: {currentScore}점");
-        }
-        
-        OnGameOver?.Invoke();
+        PointManager.Instance.SaveData();
     }
     
+    // 최고 기록 업데이트
+    UpdateHighScore();
+    
+    // CustomerSpawner 정지
+    if (CustomerSpawner.Instance != null)
+    {
+        CustomerSpawner.Instance.StopSpawning();
+        CustomerSpawner.Instance.ClearAllCustomers();
+    }
+    
+    // 게임 오버 UI 표시
+    if (gameOverPanel != null) 
+    {
+        gameOverPanel.SetActive(true);
+    }
+    
+    // 🔧 홈으로 돌아가기 버튼 표시
+    ShowReturnToHomeButton();
+    
+    // 사운드 재생
+    PlaySound(gameOverSound);
+    
+    if (enableDebugLogs)
+    {
+        Debug.Log($"💀 게임 오버! 최종 점수: {currentScore}점");
+    }
+    
+    OnGameOver?.Invoke();
+    
+    // 🔧 자동으로 홈으로 돌아가기 (설정된 경우)
+    if (returnToHomeOnGameOver)
+    {
+        StartCoroutine(AutoReturnToHome());
+    }
+}
     /// <summary>
     /// 게임 재시작 - PointManager 연동
     /// </summary>
-    public void RestartGame()
+   public void RestartGame()
+{
+    // 모든 손님 제거
+    if (CustomerSpawner.Instance != null)
     {
-        // 모든 손님 제거
-        if (CustomerSpawner.Instance != null)
-        {
-            CustomerSpawner.Instance.ClearAllCustomers();
-            CustomerSpawner.Instance.ResetStatistics();
-        }
-        
-        // 게임 상태 초기화
-        currentScore = 0;
-        gameTime = 0f;
-        currentTimeOfDay = TimeOfDay.Dawn;
-        dayGoalAchieved = false;
-        isGameStarted = false;
-        Time.timeScale = 1f;
-        
-        // 💎 포인트 시스템 재시작
-        if (PointManager.Instance != null)
-        {
-            PointManager.Instance.StartNewDay();
-        }
-        
-        // UI 초기화
-        if (gameOverPanel != null) gameOverPanel.SetActive(false);
-        if (pausePanel != null) pausePanel.SetActive(false);
-        if (dayEndPanel != null) dayEndPanel.SetActive(false);
-        
-        UpdateUI();
-        StartDay();
-        
-        if (enableDebugLogs)
-        {
-            Debug.Log("🔄 게임 재시작!");
-        }
+        CustomerSpawner.Instance.ClearAllCustomers();
+        CustomerSpawner.Instance.ResetStatistics();
     }
     
+    // 게임 상태 초기화
+    currentScore = 0;
+    gameTime = 0f;
+    currentTimeOfDay = TimeOfDay.Dawn;
+    dayGoalAchieved = false;
+    isGameStarted = false;
+    Time.timeScale = 1f;
+    
+    // 💎 포인트 시스템 재시작
+    if (PointManager.Instance != null)
+    {
+        PointManager.Instance.StartNewDay();
+    }
+    
+    // UI 초기화
+    if (gameOverPanel != null) gameOverPanel.SetActive(false);
+    if (pausePanel != null) pausePanel.SetActive(false);
+    if (dayEndPanel != null) dayEndPanel.SetActive(false);
+    
+    // 🔧 홈으로 돌아가기 버튼 숨기기
+    if (returnToHomeButton != null)
+    {
+        returnToHomeButton.gameObject.SetActive(false);
+    }
+    
+    UpdateUI();
+    StartDay();
+    
+    if (enableDebugLogs)
+    {
+        Debug.Log("🔄 게임 재시작!");
+    }
+}
     /// <summary>
     /// 게임 상태 변경
     /// </summary>
@@ -633,6 +742,25 @@ public class GameManager : MonoBehaviour
             }
         }
         
+        // 🔧 ESC 키 두 번으로 홈으로 돌아가기 (일시정지 상태에서)
+        if (Input.GetKeyDown(KeyCode.Escape) && currentState == GameState.Paused)
+        {
+            // 간단히 즉시 홈으로 이동
+            ReturnToHome();
+        }
+        
+        // R 키로 재시작 (게임 오버 또는 하루 종료 시)
+        if (Input.GetKeyDown(KeyCode.R) && (currentState == GameState.GameOver || currentState == GameState.DayEnded))
+        {
+            RestartGame();
+        }
+        
+        // 🔧 H 키로 홈으로 돌아가기 (게임 오버나 하루 종료 시)
+        if (Input.GetKeyDown(KeyCode.H) && (currentState == GameState.GameOver || currentState == GameState.DayEnded))
+        {
+            ReturnToHome();
+        }
+        
         // 디버그 시간 스킵
         if (enableTimeSkip && Input.GetKeyDown(timeSkipKey))
         {
@@ -655,7 +783,6 @@ public class GameManager : MonoBehaviour
             PointManager.Instance.PrintDebugInfo();
         }
     }
-    
     /// <summary>
     /// 게임 일시정지
     /// </summary>

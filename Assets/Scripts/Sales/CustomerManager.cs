@@ -11,6 +11,9 @@ public class CustomerManager : MonoBehaviour
     public Button customer2Button;
     public Button customer3Button;
     
+    [Header("🔧 자동 배달 방지")]
+    public bool preventAutoDelivery = true;  // 자동 배달 방지 활성화
+    
     [Header("주문 표시 UI")]
     public Text customer1OrderText;
     public Text customer2OrderText;
@@ -87,13 +90,20 @@ public class CustomerManager : MonoBehaviour
     }
     
     /// <summary>
-    /// 손님이 클릭되었을 때
+    /// 손님이 클릭되었을 때 - 자동 배달 방지 강화
     /// </summary>
     void OnCustomerClicked(int customerNumber, PreparationUI.FillingType wantedType)
     {
+        // 🔧 자동 배달 방지 체크
+        if (preventAutoDelivery)
+        {
+            Debug.Log($"🚫 CustomerManager 자동 배달 방지됨! 고급 Customer 시스템을 사용하세요.");
+            return;
+        }
+        
         Debug.Log("손님 " + customerNumber + " 클릭됨! 주문: " + GetKoreanName(wantedType));
         
-        // 선택된 호떡이 있는지 확인
+        // 🔧 명시적 호떡 선택 확인 강화
         if (StackSalesCounter.Instance == null)
         {
             Debug.LogError("StackSalesCounter가 없습니다!");
@@ -103,7 +113,7 @@ public class CustomerManager : MonoBehaviour
         GameObject selectedHotteok = StackSalesCounter.Instance.GetSelectedHotteok();
         if (selectedHotteok == null)
         {
-            Debug.Log("선택된 호떡이 없습니다! 먼저 판매대에서 호떡을 선택하세요.");
+            Debug.Log("❌ 선택된 호떡이 없습니다! 먼저 판매대에서 호떡을 선택하세요.");
             ShowNoSelectionFeedback(customerNumber);
             return;
         }
@@ -117,6 +127,8 @@ public class CustomerManager : MonoBehaviour
         }
         
         PreparationUI.FillingType selectedType = hotteokScript.fillingType;
+        
+        Debug.Log($"🎯 배달 시도: 호떡 {selectedType} → 손님 {customerNumber} (주문: {wantedType})");
         
         // 주문과 일치하는지 확인
         if (selectedType == wantedType)
@@ -136,6 +148,10 @@ public class CustomerManager : MonoBehaviour
     /// </summary>
     void CompleteOrder(int customerNumber, PreparationUI.FillingType deliveredType)
     {
+        // 🚨 호출 추적 로그 추가
+        Debug.Log($"🚨 CustomerManager.CompleteOrder() 호출됨! 손님: {customerNumber}, 호떡: {deliveredType}");
+        Debug.Log($"🚨 호출 스택: {System.Environment.StackTrace}");
+        
         Debug.Log("🎉 손님 " + customerNumber + "의 주문 완료! " + GetKoreanName(deliveredType) + " 전달");
         
         // 선택된 호떡을 손님에게 전달

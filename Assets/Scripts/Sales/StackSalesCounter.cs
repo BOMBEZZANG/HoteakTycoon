@@ -301,7 +301,7 @@ public class StackSalesCounter : MonoBehaviour
     // ========== 🚨 완전히 안전한 선택/해제 시스템 ==========
 
     /// <summary>
-    /// 🚨 호떡 선택 (위치 변경 절대 금지)
+    /// 🚨 호떡 선택 (위치 변경 절대 금지) - 자동 배달 방지 강화
     /// </summary>
     public void SelectHotteok(GameObject hotteokToSelect)
     {
@@ -337,7 +337,9 @@ public class StackSalesCounter : MonoBehaviour
                 hotteokToSelect.transform.position = originalPosition;
             }
 
-            DebugLog($"✅ 호떡 선택 완료: {selectedHotteok.name} (위치 고정됨)");
+            // 🔧 선택만 완료, 배달은 절대 자동으로 하지 않음
+            DebugLog($"✅ 호떡 선택 완료: {selectedHotteok.name} (선택만 됨, 배달 안됨)");
+            DebugLog($"👆 이제 손님을 직접 클릭해야 배달됩니다!");
         }
     }
 
@@ -378,6 +380,10 @@ public class StackSalesCounter : MonoBehaviour
 
     public bool DeliverSelectedHotteokToCustomer()
     {
+        // 🚨 호출 추적 로그 추가
+        Debug.Log("🚨 DeliverSelectedHotteokToCustomer() 호출됨!");
+        Debug.Log($"🚨 호출 스택: {System.Environment.StackTrace}");
+        
         if (selectedHotteok == null)
         {
             DebugLog("❌ 선택된 호떡이 없습니다!");

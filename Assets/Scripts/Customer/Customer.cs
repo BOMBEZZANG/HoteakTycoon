@@ -671,7 +671,7 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 입력 처리
+    /// 입력 처리 - 호떡 클릭과 충돌 방지 강화
     /// </summary>
     void HandleInput()
     {
@@ -683,9 +683,21 @@ public class Customer : MonoBehaviour
             mousePos.z = 0f;
             
             float distance = Vector2.Distance(mousePos, transform.position);
+            
+            // 🔧 호떡 클릭과 충돌 방지: 거리 체크를 더 엄격하게
             if (distance <= clickRadius)
             {
-                OnCustomerClicked();
+                // 🚨 추가 검증: 마우스가 실제로 이 손님 위에 있는지 확인
+                Collider2D hitCollider = Physics2D.OverlapPoint(mousePos);
+                if (hitCollider != null && hitCollider.gameObject == gameObject)
+                {
+                    Debug.Log($"🎯 손님 직접 클릭 감지: {customerName}");
+                    OnCustomerClicked();
+                }
+                else
+                {
+                    Debug.Log($"🚫 손님 클릭 무시: 다른 오브젝트 클릭됨 ({hitCollider?.gameObject.name ?? "null"})");
+                }
             }
         }
     }
@@ -708,7 +720,7 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 손님 클릭 처리
+    /// 손님 클릭 처리 - 두 단계 배달 시스템 강화
     /// </summary>
     void OnCustomerClicked()
     {
@@ -721,6 +733,7 @@ public class Customer : MonoBehaviour
             return;
         }
         
+        // 🔧 반드시 선택된 호떡이 있어야 배달 가능
         GameObject selectedHotteok = StackSalesCounter.Instance?.GetSelectedHotteok();
         if (selectedHotteok == null)
         {
@@ -739,6 +752,9 @@ public class Customer : MonoBehaviour
         
         PreparationUI.FillingType selectedType = hotteokScript.fillingType;
         
+        // 🔧 배달 확인 로그 추가
+        Debug.Log($"🎯 손님 배달 시도: 선택된 호떡 = {selectedType}, 고객 = {customerName}");
+        
         // 주문에 해당 타입이 있고 아직 필요한지 확인
         if (HasOrderedType(selectedType))
         {
@@ -755,6 +771,10 @@ public class Customer : MonoBehaviour
     /// </summary>
     void ReceiveHotteok(PreparationUI.FillingType receivedType)
     {
+        // 🚨 호출 추적 로그 추가
+        Debug.Log($"🚨 Customer.ReceiveHotteok() 호출됨! 고객: {customerName}, 호떡: {receivedType}");
+        Debug.Log($"🚨 호출 스택: {System.Environment.StackTrace}");
+        
         // 해당 타입의 주문 항목 찾기
         OrderItem orderItem = orderItems.Find(item => item.fillingType == receivedType && !item.IsCompleted());
         

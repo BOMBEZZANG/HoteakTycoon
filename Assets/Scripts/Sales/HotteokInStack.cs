@@ -147,8 +147,8 @@ public class HotteokInStack : MonoBehaviour
         // 🔒 위치 고정 확인
         Vector3 originalPosition = transform.position;
         
-        // 🔧 호떡 선택 (위치 변경 절대 없음)
-        SelectThisHotteok();
+        // 🔧 호떡 선택만 수행 (자동 배달 방지)
+        SelectThisHotteokOnly();
         
         // 🔧 클릭 소리만 (애니메이션 없음)
         if (selectSound != null)
@@ -225,18 +225,36 @@ public class HotteokInStack : MonoBehaviour
     }
     
     /// <summary>
-    /// 🔧 이 호떡을 선택 (위치 변경 절대 금지)
+    /// 🔧 이 호떡을 선택만 수행 (자동 배달 방지 강화)
     /// </summary>
-    void SelectThisHotteok()
+    void SelectThisHotteokOnly()
     {
+        Debug.Log($"🔵 HotteokInStack.SelectThisHotteokOnly() 호출됨: {fillingType}");
+        
         if (parentCounter != null)
         {
-            // 판매대에 현재 호떡을 선택하도록 요청
+            // 판매대에 현재 호떡을 선택하도록 요청 (선택만, 배달 안함)
             parentCounter.SelectHotteok(gameObject);
             isSelected = true;
             
-            Debug.Log($"✅ {fillingType} 호떡이 선택됨! 손님을 클릭하여 전달하세요.");
+            Debug.Log($"✅ {fillingType} 호떡이 선택만 됨! (배달 안됨)");
+            Debug.Log($"👆 이제 손님을 직접 클릭해야 배달됩니다!");
+            
+            // 🔧 자동 배달 절대 방지 확인
+            Debug.Log($"🚫 자동 배달 방지: 이 메서드는 선택만 하고 절대 배달하지 않습니다!");
         }
+        else
+        {
+            Debug.LogError($"❌ {fillingType} 호떡: parentCounter가 null입니다!");
+        }
+    }
+    
+    /// <summary>
+    /// 🔧 이 호떡을 선택 (위치 변경 절대 금지) - 레거시 호환용
+    /// </summary>
+    void SelectThisHotteok()
+    {
+        SelectThisHotteokOnly();
     }
     
     /// <summary>
