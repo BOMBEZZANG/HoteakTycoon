@@ -47,13 +47,20 @@ public class HomeManager : MonoBehaviour
     public TextMeshProUGUI gameTitle;
     public TextMeshProUGUI gameSubtitle;
     public AnimationCurve titleBounceCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
-    public float titleAnimationDuration = 2f;
+    public float titleAnimationDuration = 3f;
+    public float titleBounceIntensity = 0.2f;
     
     [Header("✨ 배경 효과")]
     public ParticleSystem backgroundParticles;
     public Image backgroundImage;
-    public Color[] backgroundColors = { Color.white, Color.cyan, Color.magenta };
-    public float colorChangeSpeed = 2f;
+    public Color[] backgroundColors = { 
+        new Color(1f, 0.8f, 0.8f, 1f),     // 부드러운 핑크
+        new Color(0.8f, 1f, 0.8f, 1f),     // 부드러운 민트
+        new Color(0.8f, 0.8f, 1f, 1f),     // 부드러운 퍼플
+        new Color(1f, 1f, 0.8f, 1f),       // 부드러운 옐로우
+        new Color(1f, 0.9f, 0.8f, 1f)      // 부드러운 피치
+    };
+    public float colorChangeSpeed = 1.5f;
     
     [Header("🔊 오디오")]
     public AudioSource bgmAudioSource;
@@ -65,12 +72,12 @@ public class HomeManager : MonoBehaviour
     
     [Header("🎭 애니메이션 설정")]
     public float panelFadeSpeed = 3f;
-    public float buttonHoverScale = 1.1f;
-    public float buttonAnimationSpeed = 5f;
+    public float buttonHoverScale = 1.15f;
+    public float buttonAnimationSpeed = 7f;
     
     [Header("💾 데이터")]
     public bool showWelcomeMessage = true;
-    public string welcomeMessage = "호떡마스터에 오신 것을 환영합니다!";
+    public string welcomeMessage = "🍯 달콤한 호떡의 세계로 오신 것을 환영합니다! 🍯";
     
     // 내부 변수들
     private AudioSource sfxAudioSource;
@@ -248,6 +255,12 @@ public class HomeManager : MonoBehaviour
             titleAnimationCoroutine = StartCoroutine(AnimateTitle());
         }
         
+        // 서브타이틀 애니메이션
+        if (gameSubtitle != null)
+        {
+            StartCoroutine(AnimateSubtitle());
+        }
+        
         // 파티클 효과
         if (backgroundParticles != null)
         {
@@ -281,7 +294,7 @@ public class HomeManager : MonoBehaviour
                 }
                 
                 colorIndex = (colorIndex + 1) % backgroundColors.Length;
-                yield return new WaitForSeconds(2f);
+                yield return new WaitForSeconds(4f); // 더 부드러운 색상 전환을 위해 시간 증가
             }
             else
             {
@@ -309,11 +322,43 @@ public class HomeManager : MonoBehaviour
                 float t = elapsedTime / titleAnimationDuration;
                 float curveValue = titleBounceCurve.Evaluate(t);
                 
-                gameTitle.transform.localScale = originalScale * (1f + curveValue * 0.1f);
+                gameTitle.transform.localScale = originalScale * (1f + curveValue * titleBounceIntensity);
                 yield return null;
             }
             
             yield return new WaitForSeconds(3f);
+        }
+    }
+    
+    /// <summary>
+    /// 서브타이틀 애니메이션 (페이드 인/아웃)
+    /// </summary>
+    IEnumerator AnimateSubtitle()
+    {
+        if (gameSubtitle == null) yield break;
+        
+        while (true)
+        {
+            // 페이드 인
+            float alpha = 0f;
+            while (alpha < 1f)
+            {
+                alpha += Time.deltaTime * 0.5f;
+                gameSubtitle.color = new Color(gameSubtitle.color.r, gameSubtitle.color.g, gameSubtitle.color.b, alpha);
+                yield return null;
+            }
+            
+            yield return new WaitForSeconds(2f);
+            
+            // 페이드 아웃
+            while (alpha > 0f)
+            {
+                alpha -= Time.deltaTime * 0.5f;
+                gameSubtitle.color = new Color(gameSubtitle.color.r, gameSubtitle.color.g, gameSubtitle.color.b, alpha);
+                yield return null;
+            }
+            
+            yield return new WaitForSeconds(1f);
         }
     }
     
@@ -413,7 +458,7 @@ public class HomeManager : MonoBehaviour
         
         if (SceneTransitionManager.Instance != null)
         {
-            SceneTransitionManager.Instance.LoadGameScene();
+            SceneTransitionManager.Instance.LoadSceneImmediate("SampleScene");
         }
         else
         {
