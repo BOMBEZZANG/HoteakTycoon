@@ -1,0 +1,336 @@
+=====================================================
+🍯 HOTTEOK MASTER GAME - ASSET REQUIREMENTS LIST 🍯
+=====================================================
+
+Total Assets Needed: 111 individual assets
+- 54 UI Graphics/Sprites (increased from 39)
+- 38 Audio Clips
+- 15 Visual Effects/Particles
+- 4 UI Indicators/Icons
+
+=====================================================
+🎨 VISUAL ASSETS - IMAGES & SPRITES (54 items)
+=====================================================
+
+┌─────────────────────────────────────────────────┐
+│ 👥 CHARACTER GRAPHICS (25 items)                │
+└─────────────────────────────────────────────────┘
+
+1. Customer Character Sprites (18 total - 3 character spots × 6 variations each)
+   ⭐ CHARACTER SPOT 1: 6 different appearances/variations
+   ⭐ CHARACTER SPOT 2: 6 different appearances/variations  
+   ⭐ CHARACTER SPOT 3: 6 different appearances/variations
+   - Each character spot has unique design theme
+   - Each spot has 6 random variations for diversity
+   - Files: Customer.cs lines 60-66, CustomerSpawner.cs lines 285-286
+
+2. Customer Facial Expressions (7 sprites)
+   - 😐 Neutral expression
+   - 😊 Happy expression  
+   - 😌 Waiting expression
+   - 😟 Worried expression
+   - 😠 Angry expression
+   - 😄 Satisfied expression
+   - 😕 Confused expression
+   - File: CustomerAnimator.cs lines 10-16
+
+┌─────────────────────────────────────────────────┐
+│ 🥞 HOTTEOK FOOD GRAPHICS (17 items)            │
+└─────────────────────────────────────────────────┘
+
+3. Raw Hotteok Sprites (4 items)
+   - Raw dough sprite
+   - Raw dough with sugar filling
+   - Raw dough with seed filling
+   - File: PreparationUI.cs lines 23,26-27
+
+4. Griddle Hotteok Sprites (2 items)
+   - Unpressed sugar hotteok
+   - Unpressed seed hotteok
+   - File: GriddleSlot.cs lines 12-13
+
+5. Cooking State Sprites (11 items)
+   - Unpressed sugar hotteok
+   - Pressed sugar hotteok
+   - Cooked sugar hotteok
+   - Burnt sugar hotteok
+   - Unpressed seed hotteok
+   - Pressed seed hotteok
+   - Cooked seed hotteok
+   - Burnt seed hotteok
+   - Ready-to-press sugar hotteok
+   - Ready-to-press seed hotteok
+   - General burnt sprite
+   - File: HotteokOnGriddle.cs lines 94-104
+
+┌─────────────────────────────────────────────────┐
+│ 😊 EMOTION ICONS & UI GRAPHICS (12 items)       │
+└─────────────────────────────────────────────────┘
+
+6. Customer Emotion Icons (12 items)
+   - 😐 Neutral emotion icon
+   - 😊 Happy emotion icon
+   - 😌 Waiting emotion icon
+   - ⚠️ Warning icon
+   - 😟 Worried icon
+   - 😡 Angry icon
+   - 🤬 Furious icon
+   - ❤️ Satisfaction icon
+   - 💖 Love/heart icon
+   - ⭐ Star rating icon
+   - 😕 Confused icon
+   - 🤔 Thinking icon
+   - 😴 Sleepy/bored icon
+   - File: CustomerUI_Enhanced.cs lines 31-49
+
+=====================================================
+🔊 AUDIO ASSETS - MUSIC & SOUND EFFECTS (38 items)
+=====================================================
+
+┌─────────────────────────────────────────────────┐
+│ 🎵 BACKGROUND MUSIC (1 item)                    │
+└─────────────────────────────────────────────────┘
+
+7. Home Scene BGM
+   - Main menu background music
+   - File: HomeManager.cs line 67
+
+┌─────────────────────────────────────────────────┐
+│ 🎮 UI SOUND EFFECTS (7 items)                   │
+└─────────────────────────────────────────────────┘
+
+8. UI Interaction Sounds (7 items)
+   - Button hover sound
+   - Button click sound
+   - Panel opening sound
+   - Panel closing sound
+   - Scene transition sound
+   - Gold update sound
+   - Sale popup sound
+   - Files: HomeManager.cs lines 68-71, SceneTransitionManager.cs lines 26-27, GoldUI.cs lines 27-28
+
+┌─────────────────────────────────────────────────┐
+│ 👥 CUSTOMER AUDIO (20 items)                    │
+└─────────────────────────────────────────────────┘
+
+9. Customer Emotion Sounds (8 items)
+   - Customer happy sound
+   - Customer satisfaction sound
+   - Customer confused sound
+   - Customer warning sound
+   - Customer angry sound
+   - Customer sad sound
+   - Customer love sound
+   - Customer star rating sound
+   - File: Customer.cs lines 106-113
+
+10. Customer Action Sounds (7 items)
+    - Customer enter sound
+    - Customer order sound
+    - Item receive sound
+    - Order complete sound
+    - Wrong order sound
+    - Satisfied exit sound
+    - Angry exit sound
+    - File: Customer.cs lines 135-141
+
+11. Customer Spawner Sounds (5 items)
+    - Customer entrance sound
+    - Customer satisfaction sound
+    - Warning sound
+    - Angry customer sound
+    - Door bell sound
+    - File: CustomerSpawner.cs lines 30-34
+
+┌─────────────────────────────────────────────────┐
+│ 🍳 COOKING AUDIO (7 items)                      │
+└─────────────────────────────────────────────────┘
+
+12. Cooking Process Sounds (7 items)
+    - Hotteok pressing sound
+    - Hotteok flipping sound
+    - Cooking complete sound
+    - Burning sound
+    - Ready to press notification
+    - Ready to flip notification
+    - Tap feedback sound
+    - File: HotteokOnGriddle.cs lines 85,107-112
+
+┌─────────────────────────────────────────────────┐
+│ 💰 SALES & GAME AUDIO (3 items)                 │
+└─────────────────────────────────────────────────┘
+
+13. Sales Sounds (2 items)
+    - Hotteok landing sound
+    - Hotteok selection sound
+    - Files: StackSalesCounter.cs line 28, HotteokInStack.cs line 16
+
+14. Game Management Sounds (1 item)
+    - Stack full warning sound
+    - File: StackSalesCounter.cs line 30
+
+=====================================================
+✨ VISUAL EFFECTS & PARTICLES (15 items)
+=====================================================
+
+┌─────────────────────────────────────────────────┐
+│ 👥 CUSTOMER EFFECTS (6 items)                   │
+└─────────────────────────────────────────────────┘
+
+15. Customer Interaction Effects (6 items)
+    - Customer satisfaction effect
+    - Customer angry effect
+    - Order completion effect
+    - Wrong order effect
+    - Click interaction effect
+    - File: Customer.cs lines 144-148
+
+16. Customer Particle Systems (3 items)
+    - Angry particle system
+    - Love particle system
+    - Confusion particle system
+    - File: CustomerUI_Enhanced.cs lines 59-61
+
+┌─────────────────────────────────────────────────┐
+│ 🍳 COOKING EFFECTS (7 items)                    │
+└─────────────────────────────────────────────────┘
+
+17. Cooking Visual Effects (7 items)
+    - Pressing particle effect
+    - Flipping particle effect
+    - Cooking completion effect
+    - Burning particle effect
+    - Steam effect
+    - Tap effect prefab
+    - Point feedback prefab
+    - File: HotteokOnGriddle.cs lines 86,115-119,124
+
+┌─────────────────────────────────────────────────┐
+│ 🏠 HOME SCENE EFFECTS (1 item)                  │
+└─────────────────────────────────────────────────┘
+
+18. Home Scene Effects (1 item)
+    - Background particle system
+    - File: HomeManager.cs line 54
+
+┌─────────────────────────────────────────────────┐
+│ 💰 SALES EFFECTS (1 item)                       │
+└─────────────────────────────────────────────────┘
+
+19. Sales Effects (1 item)
+    - Hotteok landing effect
+    - Click effect
+    - Files: StackSalesCounter.cs line 29, HotteokInStack.cs line 17
+
+=====================================================
+🎮 UI INDICATORS & FEEDBACK (4 items)
+=====================================================
+
+┌─────────────────────────────────────────────────┐
+│ ⏰ TIMING INDICATORS (4 items)                   │
+└─────────────────────────────────────────────────┘
+
+20. Cooking Timing Indicators (4 items)
+    - Perfect timing zone indicator
+    - Good timing zone indicator
+    - Flip indicator icon
+    - Flip arrow icon
+    - File: HotteokOnGriddle.cs lines 62-63,76-77
+
+=====================================================
+📋 ASSET CREATION GUIDELINES
+=====================================================
+
+🎨 VISUAL STYLE RECOMMENDATIONS:
+- Cute and casual design mood (as requested)
+- Bright, warm colors suitable for a cooking game
+- Clean, simple art style that's easy to read
+- Consistent character design across all customer sprites
+- Food graphics should look appetizing and clear
+
+🔊 AUDIO STYLE RECOMMENDATIONS:
+- Cheerful, upbeat background music
+- Clear, satisfying sound effects for interactions
+- Varied customer voice/emotion sounds
+- Cooking sounds should be realistic but pleasant
+- UI sounds should be crisp and responsive
+
+✨ EFFECT RECOMMENDATIONS:
+- Particle effects should be colorful but not overwhelming
+- Customer emotion effects should be clearly distinguishable
+- Cooking effects should provide clear feedback
+- All effects should match the cute, casual art style
+
+=====================================================
+📁 SUGGESTED FILE ORGANIZATION
+=====================================================
+
+Graphics/
+├── Characters/
+│   ├── customer_sprites/
+│   ├── customer_expressions/
+│   └── emotion_icons/
+├── Food/
+│   ├── raw_hotteok/
+│   ├── cooking_states/
+│   └── final_products/
+├── UI/
+│   ├── buttons/
+│   ├── panels/
+│   └── indicators/
+└── Effects/
+    ├── particles/
+    └── feedback/
+
+Audio/
+├── BGM/
+├── SFX/
+│   ├── ui_sounds/
+│   ├── customer_sounds/
+│   ├── cooking_sounds/
+│   └── game_sounds/
+└── Voice/
+    └── customer_reactions/
+
+=====================================================
+🎯 PRIORITY LEVELS
+=====================================================
+
+🔴 HIGH PRIORITY (Essential for basic gameplay):
+- Customer character sprites (18 total: 3 spots × 6 variations each)
+- Basic hotteok cooking states (11 sprites)
+- Essential UI sounds (button clicks, transitions)
+- Customer emotion sounds (8 items)
+- Cooking process sounds (7 items)
+
+🟡 MEDIUM PRIORITY (Important for polish):
+- Customer facial expressions (7 sprites)
+- Customer emotion icons (12 items)
+- Visual effects and particles (15 items)
+- Home scene BGM
+
+🟢 LOW PRIORITY (Nice to have):
+- Advanced timing indicators
+- Extra particle effects
+- Additional UI polish sounds
+
+=====================================================
+💡 NOTES FOR DESIGNERS
+=====================================================
+
+- This is a hotteok (Korean pancake) cooking simulation game
+- The game involves customer service, cooking timing, and sales
+- Customer satisfaction is a key gameplay element
+- The visual style should be cute and appealing to casual gamers
+- Audio should provide clear feedback for all player actions
+- All assets should work well together as a cohesive package
+
+Total Budget Estimate: 111 unique assets
+Estimated Development Time: 5-7 weeks for full asset creation
+
+📋 CHARACTER DESIGN NOTES:
+- Character Spot 1: Young/teenager customers (6 variations)
+- Character Spot 2: Adult customers (6 variations) 
+- Character Spot 3: Elderly/unique customers (6 variations)
+- Each variation should maintain the character spot's theme while offering visual diversity
+- Random selection ensures no repetitive customer appearances

@@ -56,8 +56,22 @@ public class Customer : MonoBehaviour
     public string customerName = "손님";
     
     [Header("🎨 손님 스프라이트 설정")]
-    public Sprite[] customerSprites;        // 손님 이미지 3개 배열
+    [Header("Character Spot 1 (6 variations)")]
+    public Sprite[] characterSpot1Sprites = new Sprite[6];  // 캐릭터 스팟 1의 6가지 이미지
+    
+    [Header("Character Spot 2 (6 variations)")]
+    public Sprite[] characterSpot2Sprites = new Sprite[6];  // 캐릭터 스팟 2의 6가지 이미지
+    
+    [Header("Character Spot 3 (6 variations)")]
+    public Sprite[] characterSpot3Sprites = new Sprite[6];  // 캐릭터 스팟 3의 6가지 이미지
+    
+    [Header("Character Selection")]
+    public int characterSpot = 1;           // 어떤 캐릭터 스팟을 사용할지 (1, 2, 3)
     public int selectedSpriteIndex = -1;    // 선택된 스프라이트 인덱스 (-1이면 랜덤)
+    
+    [Header("🎨 Fixed Sprite Scale (Manual Adjustment)")]
+    public float fixedCustomerScale = 0.3f; // 고정 스케일 (Unity Inspector에서 수동 조정)
+    public bool applyFixedScale = true;      // 고정 스케일 적용 여부
     
     [Header("📝 주문 정보")]
     public List<OrderItem> orderItems = new List<OrderItem>();  // 주문 항목 리스트
@@ -330,33 +344,112 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 손님 스프라이트 설정
+    /// 손님 스프라이트 설정 (3개 캐릭터 스팟, 각각 6개 이미지)
     /// </summary>
     void SetupCustomerSprite()
     {
-        if (customerSprites != null && customerSprites.Length > 0)
+        // 적절한 캐릭터 스팟 배열 선택
+        Sprite[] selectedCharacterSprites = GetCharacterSpotSprites(characterSpot);
+        
+        if (selectedCharacterSprites != null && selectedCharacterSprites.Length > 0)
         {
-            // 선택된 인덱스가 유효하지 않으면 랜덤 선택
-            if (selectedSpriteIndex < 0 || selectedSpriteIndex >= customerSprites.Length)
+            // 선택된 인덱스가 유효하지 않으면 랜덤 선택 (0-5 중 하나)
+            if (selectedSpriteIndex < 0 || selectedSpriteIndex >= selectedCharacterSprites.Length)
             {
-                selectedSpriteIndex = Random.Range(0, customerSprites.Length);
+                selectedSpriteIndex = Random.Range(0, selectedCharacterSprites.Length);
             }
             
             // 스프라이트 적용
-            if (spriteRenderer != null && customerSprites[selectedSpriteIndex] != null)
+            if (spriteRenderer != null && selectedCharacterSprites[selectedSpriteIndex] != null)
             {
-                spriteRenderer.sprite = customerSprites[selectedSpriteIndex];
+                spriteRenderer.sprite = selectedCharacterSprites[selectedSpriteIndex];
                 originalColor = spriteRenderer.color; // 색상 업데이트
+                
+                // 64x64 이미지에 맞는 스케일 적용
+                ApplyCustomerSpriteScale();
             }
             
             if (enableDebugLogs)
             {
-                Debug.Log($"🎨 {customerName} 스프라이트 {selectedSpriteIndex}번 적용");
+                Debug.Log($"🎨 {customerName} 캐릭터스팟 {characterSpot}, 스프라이트 {selectedSpriteIndex}번 적용");
             }
         }
         else if (enableDebugLogs)
         {
-            Debug.LogWarning($"⚠️ {customerName}: customerSprites가 설정되지 않았습니다!");
+            Debug.LogWarning($"⚠️ {customerName}: 캐릭터 스팟 {characterSpot}의 스프라이트가 설정되지 않았습니다!");
+        }
+    }
+    
+    /// <summary>
+    /// 캐릭터 스팟에 따른 스프라이트 배열 반환
+    /// </summary>
+    Sprite[] GetCharacterSpotSprites(int spot)
+    {
+        switch (spot)
+        {
+            case 1:
+                return characterSpot1Sprites;
+            case 2:
+                return characterSpot2Sprites;
+            case 3:
+                return characterSpot3Sprites;
+            default:
+                if (enableDebugLogs)
+                {
+                    Debug.LogWarning($"⚠️ 잘못된 캐릭터 스팟: {spot}. 기본값 1 사용.");
+                }
+                return characterSpot1Sprites;
+        }
+    }
+    
+    /// <summary>
+    /// 캐릭터 외형 설정 (CustomerSpawner에서 호출)
+    /// </summary>
+    public void SetCharacterAppearance(int characterSpotNumber, int spriteIndex = -1)
+    {
+        characterSpot = Mathf.Clamp(characterSpotNumber, 1, 3);
+        selectedSpriteIndex = spriteIndex;
+        
+        // 즉시 스프라이트 업데이트
+        SetupCustomerSprite();
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🎨 {customerName} 캐릭터 외형 설정: 스팟 {characterSpot}, 인덱스 {selectedSpriteIndex}");
+        }
+    }
+    
+    /// <summary>
+    /// 고정 스케일 적용 (Unity Inspector에서 수동 조정 가능)
+    /// </summary>
+    void ApplyCustomerSpriteScale()
+    {
+        if (!applyFixedScale) return;
+        
+        // 고정 스케일 적용
+        Vector3 targetScale = originalScale * fixedCustomerScale;
+        transform.localScale = targetScale;
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🎨 {customerName} 고정 스케일 적용: {fixedCustomerScale} → {targetScale}");
+        }
+    }
+    
+    /// <summary>
+    /// 고객 스프라이트 스케일 동적 조정 (런타임에서 호출 가능)
+    /// </summary>
+    public void SetCustomerSpriteScale(float newScale)
+    {
+        fixedCustomerScale = newScale;
+        if (applyFixedScale)
+        {
+            ApplyCustomerSpriteScale();
+        }
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🎨 {customerName} 고정 스케일 변경: {newScale}");
         }
     }
     

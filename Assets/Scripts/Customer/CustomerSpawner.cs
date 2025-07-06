@@ -39,6 +39,10 @@ public class CustomerSpawner : MonoBehaviour
     [SerializeField] private int angryCustomers = 0;              // 화난 손님 수
     [SerializeField] private float customerSatisfactionRate = 1.0f; // 만족도 비율
     
+    [Header("🎨 Fixed Customer Scale (Manual Adjustment)")]
+    public float globalFixedScale = 0.3f;      // 모든 고객의 고정 스케일 (수동 조정용)
+    public bool applyGlobalScale = true;       // 모든 고객에게 고정 스케일 적용
+    
     [Header("🐛 디버그")]
     public bool enableDebugLogs = true;         // 디버그 로그 활성화
     public bool showGizmos = true;              // 기즈모 표시
@@ -281,6 +285,16 @@ public class CustomerSpawner : MonoBehaviour
         // 🔧 InitializeCustomer 메서드 호출 (스프라이트 초기화 포함)
         customer.InitializeCustomer(customerId, customerName, this);
         
+        // 🎨 랜덤 캐릭터 외형 설정 (3개 스팟, 각각 6개 이미지 중 랜덤)
+        int randomCharacterSpot = Random.Range(1, 4); // 1-3 캐릭터 스팟 중 랜덤
+        customer.SetCharacterAppearance(randomCharacterSpot, -1); // -1은 랜덤 스프라이트 선택
+        
+        // 🎨 고정 스케일 적용 (Unity Inspector에서 수동 조정)
+        if (applyGlobalScale)
+        {
+            customer.SetCustomerSpriteScale(globalFixedScale);
+        }
+        
         // 난이도에 따른 대기 시간 조정
         float adjustedWaitTime = CalculateWaitTime();
         customer.maxWaitTime = adjustedWaitTime;
@@ -386,6 +400,7 @@ public class CustomerSpawner : MonoBehaviour
         
         DebugLog($"📊 통계 업데이트: 총 {totalCustomersServed}명, 만족 {satisfiedCustomers}명, 불만 {angryCustomers}명 (만족도: {customerSatisfactionRate:P1})");
     }
+    
     
     /// <summary>
     /// 디버그 로그 출력 (활성화된 경우에만)

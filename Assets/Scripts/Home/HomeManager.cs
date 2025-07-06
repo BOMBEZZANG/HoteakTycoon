@@ -451,20 +451,36 @@ public class HomeManager : MonoBehaviour
     /// <summary>
     /// 게임 시작 버튼 클릭
     /// </summary>
-    void OnStartGameClicked()
+// Scripts/Home/HomeManager.cs
+
+void OnStartGameClicked()
+{
+    Debug.Log("🎮 게임 시작 버튼 클릭!");
+    PlaySFX(buttonClickSound);
+
+    // Hide all UI elements before scene transition
+    if (mainMenuPanel != null)
     {
-        Debug.Log("🎮 게임 시작 버튼 클릭!");
-        PlaySFX(buttonClickSound);
-        
-        if (SceneTransitionManager.Instance != null)
-        {
-            SceneTransitionManager.Instance.LoadSceneImmediate("SampleScene");
-        }
-        else
-        {
-            Debug.LogError("SceneTransitionManager가 없습니다!");
-        }
+        mainMenuPanel.SetActive(false);
     }
+    
+    // Find and hide the Canvas
+    Canvas homeCanvas = FindObjectOfType<Canvas>();
+    if (homeCanvas != null)
+    {
+        homeCanvas.gameObject.SetActive(false);
+    }
+
+    if (SceneTransitionManager.Instance != null)
+    {
+        SceneTransitionManager.Instance.LoadSceneImmediate("SampleScene");
+    }
+    else
+    {
+        Debug.LogError("SceneTransitionManager가 없습니다!");
+    }
+}
+
     
     /// <summary>
     /// 통계 버튼 클릭

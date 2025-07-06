@@ -1860,7 +1860,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 3088889295417234181, guid: 1ce01efd7ad412844a8a56982178824a, type: 3}
+  m_Sprite: {fileID: -6093791064921547188, guid: 7692b7cc490b97a4dac8f6f628d97483, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2072,7 +2072,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 6515500511160080824, guid: 5071497485e9e5b428ffded8b6d5bd43, type: 3}
+  m_Sprite: {fileID: -4786094406510698080, guid: 76b5e1051e2c5e744b7cc1332ac1f3c2, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2447,8 +2447,8 @@ MonoBehaviour:
   sugarFillingButton: {fileID: 621957785}
   seedFillingButton: {fileID: 724123855}
   rawDoughSprite: {fileID: 2800609014710765482, guid: 34db10b4f7071474dbb5a6a35000c891, type: 3}
-  rawDoughWithSugarSprite: {fileID: -1164833021287719653, guid: df422fb6e9b1bfc40b531f518fa4e585, type: 3}
-  rawDoughWithSeedSprite: {fileID: -2765572648585651529, guid: 4219d21eaa5b77b43968526bd618f6b5, type: 3}
+  rawDoughWithSugarSprite: {fileID: 7592163846548526274, guid: 0d5dd5947c900b742854f924d760f561, type: 3}
+  rawDoughWithSeedSprite: {fileID: -707859433351630748, guid: fa3fd905457072c419fd4de4bfcacc0d, type: 3}
 --- !u!4 &1108004574
 Transform:
   m_ObjectHideFlags: 0
@@ -3133,6 +3133,8 @@ MonoBehaviour:
   satisfiedCustomers: 0
   angryCustomers: 0
   customerSatisfactionRate: 1
+  globalFixedScale: 0.3
+  applyGlobalScale: 1
   enableDebugLogs: 1
   showGizmos: 1
 --- !u!4 &1411396286
@@ -3846,7 +3848,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 2800609014710765482, guid: 34db10b4f7071474dbb5a6a35000c891, type: 3}
+  m_Sprite: {fileID: -6964405340507566841, guid: 4359b7c9d48710640b19af33470871a5, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3912,8 +3914,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   preparationUILogic: {fileID: 1108004573}
   hotteokPrefabToSpawn: {fileID: 7489947936292738732, guid: fc2c704b6247ccc45a2d3d8f8459eea4, type: 3}
-  unpressedSugarSprite: {fileID: -1164833021287719653, guid: df422fb6e9b1bfc40b531f518fa4e585, type: 3}
-  unpressedSeedSprite: {fileID: -2765572648585651529, guid: 4219d21eaa5b77b43968526bd618f6b5, type: 3}
+  unpressedSugarSprite: {fileID: -6001341121077793478, guid: df9253247c6da0c4394747eaa8bfc2ed, type: 3}
+  unpressedSeedSprite: {fileID: 512279890151474108, guid: f0f7c704085d1694ebe7d9d6cd6542d2, type: 3}
 --- !u!61 &1638524360
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4063,8 +4065,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   preparationUILogic: {fileID: 1108004573}
   hotteokPrefabToSpawn: {fileID: 7489947936292738732, guid: fc2c704b6247ccc45a2d3d8f8459eea4, type: 3}
-  unpressedSugarSprite: {fileID: -1164833021287719653, guid: df422fb6e9b1bfc40b531f518fa4e585, type: 3}
-  unpressedSeedSprite: {fileID: -2765572648585651529, guid: 4219d21eaa5b77b43968526bd618f6b5, type: 3}
+  unpressedSugarSprite: {fileID: -6001341121077793478, guid: df9253247c6da0c4394747eaa8bfc2ed, type: 3}
+  unpressedSeedSprite: {fileID: 512279890151474108, guid: f0f7c704085d1694ebe7d9d6cd6542d2, type: 3}
 --- !u!61 &1650543356
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4441,8 +4443,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   preparationUILogic: {fileID: 1108004573}
   hotteokPrefabToSpawn: {fileID: 7489947936292738732, guid: fc2c704b6247ccc45a2d3d8f8459eea4, type: 3}
-  unpressedSugarSprite: {fileID: 6034692432104653841, guid: 4075a2639f70e6f49a96bb7f62985be0, type: 3}
-  unpressedSeedSprite: {fileID: 2796670147680788260, guid: 6c45a043080027f478be573e795870ac, type: 3}
+  unpressedSugarSprite: {fileID: -6001341121077793478, guid: df9253247c6da0c4394747eaa8bfc2ed, type: 3}
+  unpressedSeedSprite: {fileID: 512279890151474108, guid: f0f7c704085d1694ebe7d9d6cd6542d2, type: 3}
 --- !u!61 &1719715541
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4647,8 +4649,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   preparationUILogic: {fileID: 1108004573}
   hotteokPrefabToSpawn: {fileID: 7489947936292738732, guid: fc2c704b6247ccc45a2d3d8f8459eea4, type: 3}
-  unpressedSugarSprite: {fileID: 6034692432104653841, guid: 4075a2639f70e6f49a96bb7f62985be0, type: 3}
-  unpressedSeedSprite: {fileID: 2796670147680788260, guid: 6c45a043080027f478be573e795870ac, type: 3}
+  unpressedSugarSprite: {fileID: -6001341121077793478, guid: df9253247c6da0c4394747eaa8bfc2ed, type: 3}
+  unpressedSeedSprite: {fileID: 512279890151474108, guid: f0f7c704085d1694ebe7d9d6cd6542d2, type: 3}
 --- !u!61 &1776540125
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4943,12 +4945,12 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: -1761714479751534639, guid: 31a02e71efe490f4589b2b2d8a7bb6c7, type: 3}
+  m_Sprite: {fileID: 6587045360277487387, guid: 7dcd7f3c84f25f64eb2c8c6f3ec9df0a, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 4.28, y: 2.97}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -5023,8 +5025,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   preparationUILogic: {fileID: 1108004573}
   hotteokPrefabToSpawn: {fileID: 7489947936292738732, guid: fc2c704b6247ccc45a2d3d8f8459eea4, type: 3}
-  unpressedSugarSprite: {fileID: -1164833021287719653, guid: df422fb6e9b1bfc40b531f518fa4e585, type: 3}
-  unpressedSeedSprite: {fileID: -2765572648585651529, guid: 4219d21eaa5b77b43968526bd618f6b5, type: 3}
+  unpressedSugarSprite: {fileID: -6001341121077793478, guid: df9253247c6da0c4394747eaa8bfc2ed, type: 3}
+  unpressedSeedSprite: {fileID: 512279890151474108, guid: f0f7c704085d1694ebe7d9d6cd6542d2, type: 3}
 --- !u!61 &1937581381
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -5212,6 +5214,9 @@ MonoBehaviour:
   returnToHomeDelay: 3
   returnToHomeButton: {fileID: 0}
   restartGameButton: {fileID: 0}
+  startNextDayButton: {fileID: 0}
+  enableNextDayMode: 1
+  currentDay: 1
   currentState: 1
   dayDurationInRealSeconds: 60
   currentTimeOfDay: 0
@@ -5233,6 +5238,7 @@ MonoBehaviour:
   pausePanel: {fileID: 0}
   currentTimeText: {fileID: 353190209}
   timeOfDayText: {fileID: 1603563286}
+  currentDayText: {fileID: 0}
   dailyTargetText: {fileID: 566795462}
   dayProgressSlider: {fileID: 1186567650}
   dayEndPanel: {fileID: 1477059617}
@@ -5467,8 +5473,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   preparationUILogic: {fileID: 1108004573}
   hotteokPrefabToSpawn: {fileID: 7489947936292738732, guid: fc2c704b6247ccc45a2d3d8f8459eea4, type: 3}
-  unpressedSugarSprite: {fileID: 6034692432104653841, guid: 4075a2639f70e6f49a96bb7f62985be0, type: 3}
-  unpressedSeedSprite: {fileID: 2796670147680788260, guid: 6c45a043080027f478be573e795870ac, type: 3}
+  unpressedSugarSprite: {fileID: -6001341121077793478, guid: df9253247c6da0c4394747eaa8bfc2ed, type: 3}
+  unpressedSeedSprite: {fileID: 512279890151474108, guid: f0f7c704085d1694ebe7d9d6cd6542d2, type: 3}
 --- !u!61 &2085464879
 BoxCollider2D:
   m_ObjectHideFlags: 0

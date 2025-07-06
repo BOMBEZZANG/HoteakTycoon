@@ -75,6 +75,108 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &1547021524529319819
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5990255286167516677}
+  - component: {fileID: 4087363346588525445}
+  - component: {fileID: 821962449740883592}
+  - component: {fileID: 5337269126109322097}
+  m_Layer: 5
+  m_Name: Canvas
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &5990255286167516677
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547021524529319819}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6259888177551602392}
+  m_Father: {fileID: 6612413378515570530}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 538.28235, y: 960.79236}
+  m_SizeDelta: {x: 1080, y: 1920}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!223 &4087363346588525445
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547021524529319819}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
+--- !u!114 &821962449740883592
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547021524529319819}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_UiScaleMode: 0
+  m_ReferencePixelsPerUnit: 100
+  m_ScaleFactor: 1
+  m_ReferenceResolution: {x: 800, y: 600}
+  m_ScreenMatchMode: 0
+  m_MatchWidthOrHeight: 0
+  m_PhysicalUnit: 3
+  m_FallbackScreenDPI: 96
+  m_DefaultSpriteDPI: 96
+  m_DynamicPixelsPerUnit: 1
+  m_PresetInfoIsWorld: 1
+--- !u!114 &5337269126109322097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547021524529319819}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &3262011724813648785
 GameObject:
   m_ObjectHideFlags: 0
@@ -287,6 +389,81 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &3915595381974887077
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6259888177551602392}
+  - component: {fileID: 1557165716966308140}
+  - component: {fileID: 215475228377419937}
+  m_Layer: 5
+  m_Name: FlipIcon
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &6259888177551602392
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3915595381974887077}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5990255286167516677}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &1557165716966308140
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3915595381974887077}
+  m_CullTransparentMesh: 1
+--- !u!114 &215475228377419937
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3915595381974887077}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: -955496982434900654, guid: 1f2c4eb117133c348ad2e6f5394ee1c4, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &5128710866469858514
 GameObject:
   m_ObjectHideFlags: 0
@@ -851,6 +1028,7 @@ Transform:
   m_Children:
   - {fileID: 1200200051852958515}
   - {fileID: 955164411609831889}
+  - {fileID: 5990255286167516677}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &7850603498698824205
@@ -940,7 +1118,7 @@ MonoBehaviour:
   cookingTimerUI: {fileID: 0}
   cookingProgressSlider: {fileID: 0}
   cookingStateText: {fileID: 0}
-  flipIndicatorIcon: {fileID: 0}
+  flipIndicatorIcon: {fileID: 3915595381974887077}
   flipArrowIcon: {fileID: 0}
   iconBlinkSpeed: 2
   readyToFlipColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
@@ -972,16 +1150,16 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  unPressedSugarSprite: {fileID: 0}
-  pressedSugarSprite: {fileID: 8693723918302632138, guid: ede4626bc182b08469d2d8cab4476c39, type: 3}
-  cookedSugarSprite: {fileID: -2605615185610052947, guid: 33a628eb3d0825740bd01a1a3be01ab0, type: 3}
-  burntSugarSprite: {fileID: 0}
-  unPressedSeedSprite: {fileID: 0}
-  pressedSeedSprite: {fileID: -4356015486030424005, guid: c1c65f1756adb0c44adea10b19b8f13a, type: 3}
-  cookedSeedSprite: {fileID: -3331199425476054103, guid: b9ac12e7810d0b940b70e1a8a5356f29, type: 3}
+  unPressedSugarSprite: {fileID: -6001341121077793478, guid: df9253247c6da0c4394747eaa8bfc2ed, type: 3}
+  pressedSugarSprite: {fileID: -1889771365654844229, guid: 732e79b37faec1647a25e2dab0cf7306, type: 3}
+  cookedSugarSprite: {fileID: -5476058649253423681, guid: 133e0828b14567741a1c1ae1012c488d, type: 3}
+  burntSugarSprite: {fileID: -1642132706223102861, guid: ace30261aad9de443ab44e0859650382, type: 3}
+  unPressedSeedSprite: {fileID: 512279890151474108, guid: f0f7c704085d1694ebe7d9d6cd6542d2, type: 3}
+  pressedSeedSprite: {fileID: -6356398364879821368, guid: f07e365d5039ea144b344b17b238b23b, type: 3}
+  cookedSeedSprite: {fileID: -5281375476216298632, guid: c7bc5047b798b5342b9d1f39b3d722dc, type: 3}
   burntSeedSprite: {fileID: 0}
-  readyToPressSugarSprite: {fileID: -7167818681738910510, guid: 47e9c531185ef3942883488de2985d5b, type: 3}
-  readyToPressSeedSprite: {fileID: -2136349348937498198, guid: 66f801c64623edf499fc964dd34a083a, type: 3}
+  readyToPressSugarSprite: {fileID: 8385578233275850102, guid: acd75cbbea5f5ff41959e1134cd2bab8, type: 3}
+  readyToPressSeedSprite: {fileID: -198917756569053741, guid: c17956cd8df18a14e9e1292690c82ca0, type: 3}
   burntSprite: {fileID: -4749823285884285777, guid: 2523999ea0e969046af44b4fd71982e7, type: 3}
   pressSound: {fileID: 0}
   flipSound: {fileID: 0}

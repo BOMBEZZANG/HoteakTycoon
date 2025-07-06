@@ -338,11 +338,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   customerID: 0
   customerName: "\uC190\uB2D8"
-  customerSprites:
-  - {fileID: -5481435721854464598, guid: 6fe73ca3fc14dca4c8be0a774fee0e33, type: 3}
-  - {fileID: 2000471751251092941, guid: 3bc5f4a02f34bc345b1b34b8972333bd, type: 3}
-  - {fileID: 1229661879383511456, guid: 687188d53b507f64b9eecedbffb6b75c, type: 3}
+  characterSpot1Sprites:
+  - {fileID: -2707378486772623378, guid: 52ae16bf1985d77448160ada241bf695, type: 3}
+  - {fileID: 6986886919785615727, guid: 9c3ef9e0acb466b4c986173745255aca, type: 3}
+  - {fileID: 6242597509913517478, guid: 63d2c50d372dbbf45a2be786e7eae250, type: 3}
+  - {fileID: -8829068645638171684, guid: 91826a0682ddd0d48b2e154939a051d3, type: 3}
+  - {fileID: -6480902202386851256, guid: 5c18aa377e8370e48a8d6d67ce53e577, type: 3}
+  - {fileID: 0}
+  characterSpot2Sprites:
+  - {fileID: -1785640134838438584, guid: ac399d3dba549fa419f6f62048441015, type: 3}
+  - {fileID: -3450810453386118858, guid: c3dcfa10d3d451242a97ab81acac13b7, type: 3}
+  - {fileID: -5910042392813289238, guid: 3909e4674c912d1458705bae77bf9193, type: 3}
+  - {fileID: 1227354366281497479, guid: 76249d7ad37013b459bd25c692ae1899, type: 3}
+  - {fileID: -8387822525481277212, guid: 6bc3bdcbc66c31d44be39845f66c8247, type: 3}
+  - {fileID: 0}
+  characterSpot3Sprites:
+  - {fileID: -5915551856541291317, guid: 7bdd4d6903d88ec44950f7d99f083b71, type: 3}
+  - {fileID: 645570423203075198, guid: 547901bae7498944dae9f5ec4f4153dc, type: 3}
+  - {fileID: 8650943829803043624, guid: f9be965fea67514499bbea29ce909a5c, type: 3}
+  - {fileID: 4730816461739179351, guid: 66bd25c0b76d7304083ceab8d8c8e1ef, type: 3}
+  - {fileID: 2210309596173809239, guid: 15c6f0e5cb33c7f40b01f8f5bc8acdf0, type: 3}
+  - {fileID: -8819100043216122558, guid: 8aa4c50f26515f6498df0e40f905de28, type: 3}
+  characterSpot: 1
   selectedSpriteIndex: -1
+  fixedCustomerScale: 0.3
+  applyFixedScale: 1
   orderItems: []
   maxTotalQuantity: 3
   minTotalQuantity: 1
@@ -561,7 +581,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 1.5}
+  m_AnchoredPosition: {x: 0, y: 3}
   m_SizeDelta: {x: 300, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &7038021584666577912
