@@ -55,23 +55,14 @@ public class Customer : MonoBehaviour
     public int customerID;
     public string customerName = "손님";
     
-    [Header("🎨 손님 스프라이트 설정")]
-    [Header("Character Spot 1 (6 variations)")]
-    public Sprite[] characterSpot1Sprites = new Sprite[6];  // 캐릭터 스팟 1의 6가지 이미지
+    [Header("🎨 Character System")]
+    public CharacterDatabase characterDatabase;  // Character database reference
+    private CharacterData currentCharacter;      // Currently assigned character data
     
-    [Header("Character Spot 2 (6 variations)")]
-    public Sprite[] characterSpot2Sprites = new Sprite[6];  // 캐릭터 스팟 2의 6가지 이미지
-    
-    [Header("Character Spot 3 (6 variations)")]
-    public Sprite[] characterSpot3Sprites = new Sprite[6];  // 캐릭터 스팟 3의 6가지 이미지
-    
-    [Header("Character Selection")]
-    public int characterSpot = 1;           // 어떤 캐릭터 스팟을 사용할지 (1, 2, 3)
-    public int selectedSpriteIndex = -1;    // 선택된 스프라이트 인덱스 (-1이면 랜덤)
-    
-    [Header("🎨 Fixed Sprite Scale (Manual Adjustment)")]
-    public float fixedCustomerScale = 0.3f; // 고정 스케일 (Unity Inspector에서 수동 조정)
-    public bool applyFixedScale = true;      // 고정 스케일 적용 여부
+    [Header("🎨 Character Display Settings")]
+    public bool overrideCharacterScale = false;  // Override character's default scale
+    public float manualScale = 2.0f;            // Manual scale override (increased for 64x64 sprites)
+    public float pixelPerfectScale = 1.0f;       // Additional scale for pixel-perfect sprites
     
     [Header("📝 주문 정보")]
     public List<OrderItem> orderItems = new List<OrderItem>();  // 주문 항목 리스트
@@ -129,8 +120,9 @@ public class Customer : MonoBehaviour
     [Header("🎭 감정 아이콘 설정")]
     public float emotionDisplayDuration = 2.0f; // 감정 표시 시간
     public Vector3 emotionIconOffset = new Vector3(0, 1.5f, 0); // 아이콘 오프셋
-    public float emotionIconScale = 1.0f;       // 아이콘 크기
+    public float emotionIconScale = 0.5f;       // 아이콘 크기 (독립적 스케일)
     public float emotionAnimationSpeed = 1.0f;  // 감정 애니메이션 속도
+    public bool scaleEmotionWithCharacter = false; // 캐릭터 크기에 따라 감정 아이콘 크기 조정
     
     [Header("이동 애니메이션")]
     public bool useMovementAnimation = true;    // 이동 애니메이션 사용
@@ -220,7 +212,7 @@ public class Customer : MonoBehaviour
     void Start()
     {
         InitializeCustomer();
-        SetupCustomerSprite();
+        SetupCharacterFromDatabase();
         StartCustomerFlow();
         
         if (enableDebugLogs)
@@ -334,8 +326,8 @@ public class Customer : MonoBehaviour
         customerName = name;
         parentSpawner = spawner;
         
-        // 스프라이트 설정
-        SetupCustomerSprite();
+        // Character setup
+        SetupCharacterFromDatabase();
         
         if (enableDebugLogs)
         {
@@ -344,112 +336,134 @@ public class Customer : MonoBehaviour
     }
     
     /// <summary>
-    /// 손님 스프라이트 설정 (3개 캐릭터 스팟, 각각 6개 이미지)
+    /// Setup character from database
     /// </summary>
-    void SetupCustomerSprite()
+    void SetupCharacterFromDatabase()
     {
-        // 적절한 캐릭터 스팟 배열 선택
-        Sprite[] selectedCharacterSprites = GetCharacterSpotSprites(characterSpot);
-        
-        if (selectedCharacterSprites != null && selectedCharacterSprites.Length > 0)
+        if (characterDatabase == null)
         {
-            // 선택된 인덱스가 유효하지 않으면 랜덤 선택 (0-5 중 하나)
-            if (selectedSpriteIndex < 0 || selectedSpriteIndex >= selectedCharacterSprites.Length)
-            {
-                selectedSpriteIndex = Random.Range(0, selectedCharacterSprites.Length);
-            }
-            
-            // 스프라이트 적용
-            if (spriteRenderer != null && selectedCharacterSprites[selectedSpriteIndex] != null)
-            {
-                spriteRenderer.sprite = selectedCharacterSprites[selectedSpriteIndex];
-                originalColor = spriteRenderer.color; // 색상 업데이트
-                
-                // 64x64 이미지에 맞는 스케일 적용
-                ApplyCustomerSpriteScale();
-            }
+            if (enableDebugLogs)
+                Debug.LogWarning($"⚠️ {customerName}: CharacterDatabase not assigned!");
+            return;
+        }
+        
+        if (currentCharacter != null)
+        {
+            ApplyCharacterData(currentCharacter);
+        }
+        else if (enableDebugLogs)
+        {
+            Debug.LogWarning($"⚠️ {customerName}: No character data assigned!");
+        }
+    }
+    
+    /// <summary>
+    /// Apply character data to sprite renderer
+    /// </summary>
+    void ApplyCharacterData(CharacterData character)
+    {
+        if (character == null || !character.IsValid() || spriteRenderer == null)
+        {
+            if (enableDebugLogs)
+                Debug.LogWarning($"⚠️ {customerName}: Invalid character data!");
+            return;
+        }
+        
+        // Apply sprite
+        Sprite sprite = character.GetRandomSprite();
+        if (sprite != null)
+        {
+            spriteRenderer.sprite = sprite;
+            originalColor = spriteRenderer.color;
+        }
+        
+        // Apply scale with pixel-perfect adjustment
+        float baseScale = overrideCharacterScale ? manualScale : character.scale;
+        float finalScale = baseScale * pixelPerfectScale;
+        Vector3 newScale = originalScale * finalScale;
+        transform.localScale = newScale;
+        
+        // Apply tint
+        spriteRenderer.color = character.tintColor;
+        
+        if (enableDebugLogs)
+        {
+            Debug.Log($"🎨 {customerName} character applied: {character.characterName}, scale: {finalScale}");
+        }
+    }
+    
+    /// <summary>
+    /// Set random character from database
+    /// </summary>
+    public void SetRandomCharacter()
+    {
+        if (characterDatabase == null)
+        {
+            if (enableDebugLogs)
+                Debug.LogWarning($"⚠️ {customerName}: No character database assigned!");
+            return;
+        }
+        
+        currentCharacter = characterDatabase.GetRandomCharacter();
+        if (currentCharacter != null)
+        {
+            ApplyCharacterData(currentCharacter);
             
             if (enableDebugLogs)
             {
-                Debug.Log($"🎨 {customerName} 캐릭터스팟 {characterSpot}, 스프라이트 {selectedSpriteIndex}번 적용");
+                Debug.Log($"🎨 {customerName} assigned character: {currentCharacter.characterName}");
             }
         }
         else if (enableDebugLogs)
         {
-            Debug.LogWarning($"⚠️ {customerName}: 캐릭터 스팟 {characterSpot}의 스프라이트가 설정되지 않았습니다!");
+            Debug.LogWarning($"⚠️ {customerName}: Failed to get character from database!");
         }
     }
     
     /// <summary>
-    /// 캐릭터 스팟에 따른 스프라이트 배열 반환
+    /// Set specific character by name
     /// </summary>
-    Sprite[] GetCharacterSpotSprites(int spot)
+    public void SetCharacterByName(string characterName)
     {
-        switch (spot)
+        if (characterDatabase == null)
         {
-            case 1:
-                return characterSpot1Sprites;
-            case 2:
-                return characterSpot2Sprites;
-            case 3:
-                return characterSpot3Sprites;
-            default:
-                if (enableDebugLogs)
-                {
-                    Debug.LogWarning($"⚠️ 잘못된 캐릭터 스팟: {spot}. 기본값 1 사용.");
-                }
-                return characterSpot1Sprites;
+            if (enableDebugLogs)
+                Debug.LogWarning($"⚠️ {customerName}: No character database assigned!");
+            return;
+        }
+        
+        currentCharacter = characterDatabase.GetCharacterByName(characterName);
+        if (currentCharacter != null)
+        {
+            ApplyCharacterData(currentCharacter);
+            
+            if (enableDebugLogs)
+            {
+                Debug.Log($"🎨 {customerName} assigned specific character: {currentCharacter.characterName}");
+            }
+        }
+        else if (enableDebugLogs)
+        {
+            Debug.LogWarning($"⚠️ {customerName}: Character '{characterName}' not found in database!");
         }
     }
     
     /// <summary>
-    /// 캐릭터 외형 설정 (CustomerSpawner에서 호출)
+    /// Set character scale override
     /// </summary>
-    public void SetCharacterAppearance(int characterSpotNumber, int spriteIndex = -1)
+    public void SetCharacterScale(float newScale)
     {
-        characterSpot = Mathf.Clamp(characterSpotNumber, 1, 3);
-        selectedSpriteIndex = spriteIndex;
+        manualScale = newScale;
+        overrideCharacterScale = true;
         
-        // 즉시 스프라이트 업데이트
-        SetupCustomerSprite();
-        
-        if (enableDebugLogs)
+        if (currentCharacter != null)
         {
-            Debug.Log($"🎨 {customerName} 캐릭터 외형 설정: 스팟 {characterSpot}, 인덱스 {selectedSpriteIndex}");
-        }
-    }
-    
-    /// <summary>
-    /// 고정 스케일 적용 (Unity Inspector에서 수동 조정 가능)
-    /// </summary>
-    void ApplyCustomerSpriteScale()
-    {
-        if (!applyFixedScale) return;
-        
-        // 고정 스케일 적용
-        Vector3 targetScale = originalScale * fixedCustomerScale;
-        transform.localScale = targetScale;
-        
-        if (enableDebugLogs)
-        {
-            Debug.Log($"🎨 {customerName} 고정 스케일 적용: {fixedCustomerScale} → {targetScale}");
-        }
-    }
-    
-    /// <summary>
-    /// 고객 스프라이트 스케일 동적 조정 (런타임에서 호출 가능)
-    /// </summary>
-    public void SetCustomerSpriteScale(float newScale)
-    {
-        fixedCustomerScale = newScale;
-        if (applyFixedScale)
-        {
-            ApplyCustomerSpriteScale();
+            ApplyCharacterData(currentCharacter);
         }
         
         if (enableDebugLogs)
         {
-            Debug.Log($"🎨 {customerName} 고정 스케일 변경: {newScale}");
+            Debug.Log($"🎨 {customerName} scale override: {newScale}");
         }
     }
     
@@ -1287,7 +1301,12 @@ public class Customer : MonoBehaviour
         
         // 위치 및 크기 설정
         emotionIcon.transform.position = transform.position + emotionIconOffset;
-        emotionIcon.transform.localScale = Vector3.one * emotionIconScale;
+        
+        // 감정 아이콘 스케일 계산 (캐릭터 스케일과 독립적)
+        float finalEmotionScale = scaleEmotionWithCharacter ? 
+            emotionIconScale * (transform.localScale.x / originalScale.x) : 
+            emotionIconScale;
+        emotionIcon.transform.localScale = Vector3.one * finalEmotionScale;
         
         // 애니메이션 효과
         yield return StartCoroutine(AnimateEmotionIcon(emotionIcon, duration));
@@ -1308,7 +1327,12 @@ public class Customer : MonoBehaviour
         
         // 위치 및 크기 설정
         emotionIcon.transform.position = transform.position + emotionIconOffset;
-        emotionIcon.transform.localScale = Vector3.one * emotionIconScale;
+        
+        // 감정 아이콘 스케일 계산 (캐릭터 스케일과 독립적)
+        float finalEmotionScale = scaleEmotionWithCharacter ? 
+            emotionIconScale * (transform.localScale.x / originalScale.x) : 
+            emotionIconScale;
+        emotionIcon.transform.localScale = Vector3.one * finalEmotionScale;
         
         // 상태가 변경될 때까지 계속 표시
         while (currentEmotionIcon == emotionIcon && 
@@ -1335,7 +1359,12 @@ public class Customer : MonoBehaviour
     IEnumerator AnimateEmotionIcon(GameObject emotionIcon, float duration)
     {
         float elapsedTime = 0f;
-        Vector3 originalScale = Vector3.one * emotionIconScale;
+        
+        // 감정 아이콘의 기본 스케일 계산 (캐릭터 스케일과 독립적)
+        float baseEmotionScale = scaleEmotionWithCharacter ? 
+            emotionIconScale * (transform.localScale.x / originalScale.x) : 
+            emotionIconScale;
+        Vector3 baseScale = Vector3.one * baseEmotionScale;
         
         while (elapsedTime < duration)
         {
@@ -1343,7 +1372,7 @@ public class Customer : MonoBehaviour
             float progress = elapsedTime / duration;
             
             // 스케일 애니메이션
-            float scale = emotionIconScale;
+            float scale = baseEmotionScale;
             if (progress < 0.2f)
             {
                 // 팝업 효과
@@ -1653,6 +1682,8 @@ public class Customer : MonoBehaviour
     public string GetCustomerName() => customerName;
     public bool WasAngry() => wasAngry;
     public int GetWrongOrderAttempts() => wrongOrderAttempts;
+    public CharacterData GetCurrentCharacter() => currentCharacter;
+    public string GetCurrentCharacterName() => currentCharacter?.characterName ?? "Unknown";
     
     /// <summary>
     /// CustomerSpawner에서 호출하는 설정 메서드

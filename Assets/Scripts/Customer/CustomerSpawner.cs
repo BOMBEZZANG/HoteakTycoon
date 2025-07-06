@@ -39,9 +39,10 @@ public class CustomerSpawner : MonoBehaviour
     [SerializeField] private int angryCustomers = 0;              // 화난 손님 수
     [SerializeField] private float customerSatisfactionRate = 1.0f; // 만족도 비율
     
-    [Header("🎨 Fixed Customer Scale (Manual Adjustment)")]
-    public float globalFixedScale = 0.3f;      // 모든 고객의 고정 스케일 (수동 조정용)
-    public bool applyGlobalScale = true;       // 모든 고객에게 고정 스케일 적용
+    [Header("🎨 Character System")]
+    public CharacterDatabase characterDatabase;  // Character database for all customers
+    public bool applyGlobalScale = true;         // Apply global scale to all customers
+    public float globalFixedScale = 0.3f;        // Global scale override
     
     [Header("🐛 디버그")]
     public bool enableDebugLogs = true;         // 디버그 로그 활성화
@@ -234,6 +235,18 @@ public class CustomerSpawner : MonoBehaviour
             return;
         }
         
+        if (characterDatabase == null)
+        {
+            Debug.LogError("❌ characterDatabase가 설정되지 않았습니다!");
+            return;
+        }
+        
+        if (characterDatabase.GetValidCharacterCount() == 0)
+        {
+            Debug.LogError("❌ characterDatabase에 유효한 캐릭터가 없습니다!");
+            return;
+        }
+        
         // 사용 가능한 카운터 선택
         int counterIndex = availableCounters.Dequeue();
         counterOccupied[counterIndex] = true;
@@ -282,17 +295,19 @@ public class CustomerSpawner : MonoBehaviour
         customer.SetSpawner(this);
         customer.SetPositions(enterPos, counterPos, exitPos);
         
-        // 🔧 InitializeCustomer 메서드 호출 (스프라이트 초기화 포함)
+        // Initialize customer with basic data
         customer.InitializeCustomer(customerId, customerName, this);
         
-        // 🎨 랜덤 캐릭터 외형 설정 (3개 스팟, 각각 6개 이미지 중 랜덤)
-        int randomCharacterSpot = Random.Range(1, 4); // 1-3 캐릭터 스팟 중 랜덤
-        customer.SetCharacterAppearance(randomCharacterSpot, -1); // -1은 랜덤 스프라이트 선택
+        // Set character database reference
+        customer.characterDatabase = characterDatabase;
         
-        // 🎨 고정 스케일 적용 (Unity Inspector에서 수동 조정)
+        // Apply random character from database
+        customer.SetRandomCharacter();
+        
+        // Apply global scale if needed
         if (applyGlobalScale)
         {
-            customer.SetCustomerSpriteScale(globalFixedScale);
+            customer.SetCharacterScale(globalFixedScale);
         }
         
         // 난이도에 따른 대기 시간 조정
@@ -309,12 +324,13 @@ public class CustomerSpawner : MonoBehaviour
         DebugLog($"   ID: {customerId}");
         DebugLog($"   위치: {customerObj.transform.position}");
         DebugLog($"   대기시간: {adjustedWaitTime:F1}초");
+        DebugLog($"   캐릭터: {customer.GetCurrentCharacterName()}");
         
         // 🔍 스프라이트 렌더러 상태 확인
         SpriteRenderer customerSprite = customer.GetComponent<SpriteRenderer>();
         if (customerSprite != null)
         {
-            DebugLog($"   스프라이트 렌더러: enabled={customerSprite.enabled}, sprite={customerSprite.sprite?.name ?? "null"}");
+            DebugLog($"   스프라이트: enabled={customerSprite.enabled}, sprite={customerSprite.sprite?.name ?? "null"}");
         }
         else
         {

@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d8a47d5ec2cd2f459a1b6d04c3d39ae, type: 3}
+  m_Name: DefaultCharacterDatabase
+  m_EditorClassIdentifier: 
+  characters:
+  - characterName: Customer
+    characterDescription: 
+    sprites:
+    - {fileID: -2707378486772623378, guid: 4708d17cfa13f7a469efd7446c1ed254, type: 3}
+    - {fileID: 6986886919785615727, guid: 6b2aae4ef203c4c4db0f7e6543a53a81, type: 3}
+    - {fileID: 6242597509913517478, guid: 9992e9cfd99cf9e47b317df82fc94e51, type: 3}
+    - {fileID: -8829068645638171684, guid: 79b34dbf16a525a4db01253f33d25b07, type: 3}
+    - {fileID: -6480902202386851256, guid: 3fe843c6728ba804c8fcc094b83f8d36, type: 3}
+    - {fileID: 0}
+    scale: 1.5
+    tintColor: {r: 1, g: 1, b: 1, a: 1}
+    patienceMultiplier: 1
+    orderComplexity: 1
+    voiceSounds: []
+  - characterName: Customer
+    characterDescription: 
+    sprites:
+    - {fileID: -1785640134838438584, guid: 65c6affbc1b45564eaa99334b52c2dc7, type: 3}
+    - {fileID: -3450810453386118858, guid: efa484ab71ec0c64faae50197dcd59e1, type: 3}
+    - {fileID: -5910042392813289238, guid: 06b6b9d1423e455428d66122130a6aba, type: 3}
+    - {fileID: 1227354366281497479, guid: 06d38b6948454544aab2aee22b71877e, type: 3}
+    - {fileID: -8387822525481277212, guid: a8979e3eee06ce246a2c4b174074debf, type: 3}
+    - {fileID: 0}
+    scale: 1.5
+    tintColor: {r: 1, g: 1, b: 1, a: 1}
+    patienceMultiplier: 1
+    orderComplexity: 1
+    voiceSounds: []
+  - characterName: Customer
+    characterDescription: 
+    sprites:
+    - {fileID: -5915551856541291317, guid: 06978b52fc9e2694b86fde740febeb5e, type: 3}
+    - {fileID: 645570423203075198, guid: 7035e1372901d49449285920d6e950a7, type: 3}
+    - {fileID: 8650943829803043624, guid: edf5f993189d08f46a996c7335f7e53a, type: 3}
+    - {fileID: 4730816461739179351, guid: edb3437c9e3f5b349a446637a5aa70af, type: 3}
+    - {fileID: 2210309596173809239, guid: 43d43cf086b073146881988651112697, type: 3}
+    - {fileID: -8819100043216122558, guid: edda8367a04829b498127172f20e0174, type: 3}
+    scale: 1.5
+    tintColor: {r: 1, g: 1, b: 1, a: 1}
+    patienceMultiplier: 1
+    orderComplexity: 1
+    voiceSounds: []
+  enableDebugLogs: 1
