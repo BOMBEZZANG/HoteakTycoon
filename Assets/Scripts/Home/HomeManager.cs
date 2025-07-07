@@ -127,10 +127,11 @@ public class HomeManager : MonoBehaviour
         isInitialized = true;
         Debug.Log("🏠 HomeManager 초기화 완료");
     }
-    
+
     /// <summary>
     /// UI 설정 및 버튼 이벤트 연결
     /// </summary>
+    [System.Obsolete]
     void SetupUI()
     {
         // 초기 패널 상태 설정
@@ -445,15 +446,16 @@ public class HomeManager : MonoBehaviour
         
         buttonTransform.localScale = targetScale;
     }
-    
+
     // ===== 버튼 이벤트 핸들러들 =====
-    
+
     /// <summary>
     /// 게임 시작 버튼 클릭
     /// </summary>
-// Scripts/Home/HomeManager.cs
+    // Scripts/Home/HomeManager.cs
 
-void OnStartGameClicked()
+    [System.Obsolete]
+    void OnStartGameClicked()
 {
     Debug.Log("🎮 게임 시작 버튼 클릭!");
     PlaySFX(buttonClickSound);

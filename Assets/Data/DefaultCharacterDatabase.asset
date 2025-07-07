@@ -22,7 +22,7 @@ MonoBehaviour:
     - {fileID: -8829068645638171684, guid: 79b34dbf16a525a4db01253f33d25b07, type: 3}
     - {fileID: -6480902202386851256, guid: 3fe843c6728ba804c8fcc094b83f8d36, type: 3}
     - {fileID: 0}
-    scale: 1.5
+    scale: 3
     tintColor: {r: 1, g: 1, b: 1, a: 1}
     patienceMultiplier: 1
     orderComplexity: 1
@@ -36,7 +36,7 @@ MonoBehaviour:
     - {fileID: 1227354366281497479, guid: 06d38b6948454544aab2aee22b71877e, type: 3}
     - {fileID: -8387822525481277212, guid: a8979e3eee06ce246a2c4b174074debf, type: 3}
     - {fileID: 0}
-    scale: 1.5
+    scale: 3
     tintColor: {r: 1, g: 1, b: 1, a: 1}
     patienceMultiplier: 1
     orderComplexity: 1
@@ -50,7 +50,7 @@ MonoBehaviour:
     - {fileID: 4730816461739179351, guid: edb3437c9e3f5b349a446637a5aa70af, type: 3}
     - {fileID: 2210309596173809239, guid: 43d43cf086b073146881988651112697, type: 3}
     - {fileID: -8819100043216122558, guid: edda8367a04829b498127172f20e0174, type: 3}
-    scale: 1.5
+    scale: 3
     tintColor: {r: 1, g: 1, b: 1, a: 1}
     patienceMultiplier: 1
     orderComplexity: 1

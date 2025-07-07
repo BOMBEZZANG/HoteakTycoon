@@ -11,7 +11,11 @@ public class CustomerUI_Enhanced : MonoBehaviour
 {
     [Header("UI 컨테이너")]
     public Canvas worldCanvas;                  
-    public GameObject uiContainer;              
+    public GameObject uiContainer;
+    
+    [Header("독립적인 UI 컨테이너")]
+    public GameObject orderBubbleContainer;     // 주문 말풍선 전용 컨테이너
+    public GameObject emotionIconContainer;     // 감정 아이콘 전용 컨테이너              
     
     [Header("📝 주문 표시")]
     public GameObject orderBubble;              
@@ -49,11 +53,15 @@ public class CustomerUI_Enhanced : MonoBehaviour
     public GameObject sleepyIcon;               // 😴 지루함
     
     [Header("🎨 아이콘 애니메이션 설정")]
-    public Vector3 iconOffset = new Vector3(0, 1.2f, 0);  // 머리 위 오프셋
+    public Vector3 iconOffset = new Vector3(0.8f, 0.5f, 0);  // 얼굴 옆 오프셋 (우측)
     public float iconScale = 1.0f;                         // 아이콘 크기
     public float pulseSpeed = 2.0f;                        // 맥박 속도
     public float bounceHeight = 0.3f;                      // 바운스 높이
     public float rotationSpeed = 90f;                      // 회전 속도
+    
+    [Header("📋 주문 말풍선 설정")]
+    public Vector3 orderBubbleOffset = new Vector3(0, 1.8f, 0);  // 머리 위 오프셋
+    public Vector2 orderBubbleSize = new Vector2(180, 80);       // 말풍선 크기 (더 작게)
     
     [Header("⚡ 특수 이펙트")]
     public ParticleSystem angryParticles;       // 분노 파티클
@@ -100,8 +108,9 @@ public class CustomerUI_Enhanced : MonoBehaviour
     
     void Awake()
     {
-        InitializeUI();
+        // 초기화 순서가 중요함: 먼저 감정 시스템, 그 다음 UI
         SetupEmotionIconSystem();
+        InitializeUI();
     }
     
     void Start()
@@ -116,10 +125,28 @@ public class CustomerUI_Enhanced : MonoBehaviour
     
     void LateUpdate()
     {
-        if (enableUI && worldCanvas != null && Camera.main != null)
+        if (enableUI && Camera.main != null)
         {
-            worldCanvas.transform.LookAt(Camera.main.transform);
-            worldCanvas.transform.Rotate(0, 180, 0);
+            // 기존 worldCanvas 회전
+            if (worldCanvas != null)
+            {
+                worldCanvas.transform.LookAt(Camera.main.transform);
+                worldCanvas.transform.Rotate(0, 180, 0);
+            }
+            
+            // 주문 말풍선 컨테이너 회전
+            if (orderBubbleContainer != null)
+            {
+                orderBubbleContainer.transform.LookAt(Camera.main.transform);
+                orderBubbleContainer.transform.Rotate(0, 180, 0);
+            }
+            
+            // 감정 아이콘 컨테이너 회전
+            if (emotionIconContainer != null)
+            {
+                emotionIconContainer.transform.LookAt(Camera.main.transform);
+                emotionIconContainer.transform.Rotate(0, 180, 0);
+            }
         }
     }
     
@@ -179,9 +206,28 @@ public class CustomerUI_Enhanced : MonoBehaviour
     {
         if (icon == null) return;
         
-        // 위치 설정
-        icon.transform.position = transform.position + iconOffset;
-        icon.transform.localScale = Vector3.one * iconScale;
+        // 감정 아이콘 컨테이너가 있으면 해당 컨테이너에 부모 설정
+        if (emotionIconContainer != null)
+        {
+            icon.transform.SetParent(emotionIconContainer.transform, false);
+            icon.transform.localPosition = Vector3.zero;
+            icon.transform.localRotation = Quaternion.identity;
+            icon.transform.localScale = Vector3.one * iconScale;
+            
+            // RectTransform 설정 (UI 요소인 경우)
+            RectTransform iconRect = icon.GetComponent<RectTransform>();
+            if (iconRect != null)
+            {
+                iconRect.anchoredPosition = Vector2.zero;
+                iconRect.sizeDelta = new Vector2(50, 50); // 아이콘 크기
+            }
+        }
+        else
+        {
+            // 기본 설정 (감정 아이콘 컨테이너가 없는 경우)
+            icon.transform.position = transform.position + iconOffset;
+            icon.transform.localScale = Vector3.one * iconScale;
+        }
         
         // Canvas Group 추가 (페이드 효과용)
         if (icon.GetComponent<CanvasGroup>() == null)
@@ -195,14 +241,24 @@ public class CustomerUI_Enhanced : MonoBehaviour
     /// </summary>
     public void ShowEmotionIcon(string emotionKey, float duration = 2f, bool playSound = true)
     {
-        if (!enableUI || !emotionIcons.ContainsKey(emotionKey)) 
+        if (!enableUI)
         {
-            Debug.LogWarning($"⚠️ 알 수 없는 감정 키: {emotionKey}");
+            Debug.LogWarning("⚠️ UI가 비활성화되어 있습니다");
+            return;
+        }
+        
+        if (emotionIcons == null || !emotionIcons.ContainsKey(emotionKey)) 
+        {
+            Debug.LogWarning($"⚠️ 알 수 없는 감정 키 또는 감정 아이콘 시스템 미초기화: {emotionKey}");
             return;
         }
         
         GameObject targetIcon = emotionIcons[emotionKey];
-        if (targetIcon == null) return;
+        if (targetIcon == null) 
+        {
+            Debug.LogWarning($"⚠️ 감정 아이콘이 Inspector에 할당되지 않음: {emotionKey}");
+            return;
+        }
         
         // 이전 아이콘 숨기기
         HideCurrentIcon();
@@ -535,10 +591,19 @@ public class CustomerUI_Enhanced : MonoBehaviour
     
     void InitializeUI()
     {
+        // 먼저 감정 아이콘 시스템 초기화
+        if (emotionIcons == null)
+        {
+            SetupEmotionIconSystem();
+        }
+        
         if (worldCanvas == null)
         {
             CreateWorldCanvas();
         }
+        
+        // 독립 컨테이너들 생성
+        CreateIndependentContainers();
         
         if (progressFillImage != null)
         {
@@ -560,7 +625,7 @@ public class CustomerUI_Enhanced : MonoBehaviour
         
         GameObject canvasObj = new GameObject("CustomerUI_Canvas");
         canvasObj.transform.SetParent(transform);
-        canvasObj.transform.localPosition = Vector3.up * 1.5f;
+        canvasObj.transform.localPosition = Vector3.zero; // 기본 위치
         
         worldCanvas = canvasObj.AddComponent<Canvas>();
         worldCanvas.renderMode = RenderMode.WorldSpace;
@@ -582,6 +647,112 @@ public class CustomerUI_Enhanced : MonoBehaviour
         Debug.Log("📋 CustomerUI Canvas 자동 생성됨");
     }
     
+    /// <summary>
+    /// 독립적인 UI 컨테이너들 생성
+    /// </summary>
+    void CreateIndependentContainers()
+    {
+        // 주문 말풍선 컨테이너 생성 (World Space Canvas)
+        if (orderBubbleContainer == null)
+        {
+            orderBubbleContainer = new GameObject("OrderBubbleContainer");
+            orderBubbleContainer.transform.SetParent(transform);
+            orderBubbleContainer.transform.localPosition = orderBubbleOffset;
+            
+            // Canvas 컴포넌트 추가
+            Canvas bubbleCanvas = orderBubbleContainer.AddComponent<Canvas>();
+            bubbleCanvas.renderMode = RenderMode.WorldSpace;
+            bubbleCanvas.worldCamera = Camera.main;
+            
+            // CanvasScaler 추가
+            CanvasScaler bubbleScaler = orderBubbleContainer.AddComponent<CanvasScaler>();
+            bubbleScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            bubbleScaler.referenceResolution = new Vector2(1920, 1080);
+            
+            // RectTransform 설정
+            RectTransform bubbleRect = orderBubbleContainer.GetComponent<RectTransform>();
+            bubbleRect.sizeDelta = orderBubbleSize;
+            bubbleRect.localScale = Vector3.one * 0.01f; // World space scaling
+            
+            // GraphicRaycaster 추가 (UI 상호작용용)
+            orderBubbleContainer.AddComponent<GraphicRaycaster>();
+        }
+        
+        // 감정 아이콘 컨테이너 생성 (World Space Canvas)
+        if (emotionIconContainer == null)
+        {
+            emotionIconContainer = new GameObject("EmotionIconContainer");
+            emotionIconContainer.transform.SetParent(transform);
+            emotionIconContainer.transform.localPosition = iconOffset;
+            
+            // Canvas 컴포넌트 추가
+            Canvas iconCanvas = emotionIconContainer.AddComponent<Canvas>();
+            iconCanvas.renderMode = RenderMode.WorldSpace;
+            iconCanvas.worldCamera = Camera.main;
+            
+            // CanvasScaler 추가
+            CanvasScaler iconScaler = emotionIconContainer.AddComponent<CanvasScaler>();
+            iconScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            iconScaler.referenceResolution = new Vector2(1920, 1080);
+            
+            // RectTransform 설정
+            RectTransform iconRect = emotionIconContainer.GetComponent<RectTransform>();
+            iconRect.sizeDelta = new Vector2(100, 100); // 아이콘 컨테이너 크기
+            iconRect.localScale = Vector3.one * 0.01f; // World space scaling
+            
+            // GraphicRaycaster 추가 (UI 상호작용용)
+            emotionIconContainer.AddComponent<GraphicRaycaster>();
+        }
+        
+        Debug.Log("📋 독립 UI 컨테이너들 생성됨 (World Space Canvas)");
+        
+        // 기존 UI 요소들을 새 컨테이너로 이동
+        RefreshUIElementParents();
+    }
+    
+    /// <summary>
+    /// 기존 UI 요소들을 적절한 컨테이너로 재배치
+    /// </summary>
+    void RefreshUIElementParents()
+    {
+        // 주문 말풍선을 새 컨테이너로 이동
+        if (orderBubble != null && orderBubbleContainer != null)
+        {
+            orderBubble.transform.SetParent(orderBubbleContainer.transform, false);
+            orderBubble.transform.localPosition = Vector3.zero;
+            orderBubble.transform.localRotation = Quaternion.identity;
+            orderBubble.transform.localScale = Vector3.one;
+            
+            RectTransform bubbleRect = orderBubble.GetComponent<RectTransform>();
+            if (bubbleRect != null)
+            {
+                bubbleRect.anchoredPosition = Vector2.zero;
+                bubbleRect.sizeDelta = orderBubbleSize;
+            }
+        }
+        
+        // 모든 감정 아이콘들을 새 컨테이너로 이동 (null 체크 추가)
+        if (emotionIconContainer != null && emotionIcons != null)
+        {
+            foreach (var kvp in emotionIcons)
+            {
+                if (kvp.Value != null)
+                {
+                    SetupIconTransform(kvp.Value);
+                }
+            }
+        }
+        else
+        {
+            if (emotionIconContainer == null)
+                Debug.LogWarning("⚠️ EmotionIconContainer is null during RefreshUIElementParents");
+            if (emotionIcons == null)
+                Debug.LogWarning("⚠️ EmotionIcons dictionary is null during RefreshUIElementParents");
+        }
+        
+        Debug.Log("📋 기존 UI 요소들이 새 컨테이너로 이동됨");
+    }
+    
     public void ShowOrderBubble(List<Customer.OrderItem> orderItems)
     {
         if (!enableUI || !isInitialized || orderItems == null || orderItems.Count == 0) return;
@@ -594,11 +765,31 @@ public class CustomerUI_Enhanced : MonoBehaviour
         if (orderText != null)
         {
             orderText.text = orderDisplayText;
+            // 텍스트 크기 조정
+            orderText.fontSize = orderTextSize * 0.8f; // 더 작게
         }
         
         if (orderBubble != null)
         {
             orderBubble.SetActive(true);
+            
+            // 주문 말풍선 컨테이너가 있으면 해당 컨테이너에 부모 설정
+            if (orderBubbleContainer != null)
+            {
+                orderBubble.transform.SetParent(orderBubbleContainer.transform, false);
+                orderBubble.transform.localPosition = Vector3.zero;
+                orderBubble.transform.localRotation = Quaternion.identity;
+                orderBubble.transform.localScale = Vector3.one;
+            }
+            
+            // 말풍선 크기 조정
+            RectTransform bubbleRect = orderBubble.GetComponent<RectTransform>();
+            if (bubbleRect != null)
+            {
+                bubbleRect.sizeDelta = orderBubbleSize;
+                bubbleRect.anchoredPosition = Vector2.zero;
+            }
+            
             StartCoroutine(BubblePopAnimation(orderBubble));
         }
         
@@ -610,25 +801,39 @@ public class CustomerUI_Enhanced : MonoBehaviour
     {
         if (orderItems == null || orderItems.Count == 0) return "주문 없음";
         
-        string displayText = "주문:\n";
+        string displayText = "";
         
         for (int i = 0; i < orderItems.Count; i++)
         {
             Customer.OrderItem item = orderItems[i];
             string itemName = GetHotteokName(item.fillingType);
             
+            // Debug logging to check quantity values
+            Debug.Log($"🐛 Order item {i}: {itemName}, quantity={item.quantity}, receivedQuantity={item.receivedQuantity}");
+            
+            // Ensure quantity is valid (minimum 1)
+            int displayQuantity = Mathf.Max(1, item.quantity);
+            
+            // Create the quantity text separately for debugging
+            string quantityText = displayQuantity.ToString();
+            Debug.Log($"🐛 Quantity text: '{quantityText}', Length: {quantityText.Length}");
+            
             if (item.IsCompleted())
             {
-                displayText += $"✅ {itemName} {item.quantity}개";
+                displayText += "✅ " + itemName + " " + quantityText + "개";
             }
             else
             {
-                displayText += $"🔲 {itemName} {item.quantity}개";
+                displayText += "🔲 " + itemName + " " + quantityText + "개";
             }
+            
+            // Debug the complete line
+            string currentLine = (item.IsCompleted() ? "✅ " : "🔲 ") + itemName + " " + quantityText + "개";
+            Debug.Log($"🐛 Current line: '{currentLine}'");
             
             if (item.receivedQuantity > 0)
             {
-                displayText += $" ({item.receivedQuantity}/{item.quantity})";
+                displayText += " (" + item.receivedQuantity.ToString() + "/" + displayQuantity.ToString() + ")";
             }
             
             if (i < orderItems.Count - 1)
@@ -898,5 +1103,145 @@ public class CustomerUI_Enhanced : MonoBehaviour
         string[] emotions = {"happy", "thinking", "satisfaction", "heart"};
         float[] durations = {1f, 1f, 1f, 2f};
         ShowEmotionSequence(emotions, durations);
+    }
+    
+    /// <summary>
+    /// 🎯 런타임 위치 조정 함수들
+    /// </summary>
+    [ContextMenu("Update Emotion Icon Position")]
+    public void UpdateEmotionIconPosition()
+    {
+        if (emotionIconContainer != null)
+        {
+            emotionIconContainer.transform.localPosition = iconOffset;
+            Debug.Log($"🎭 감정 아이콘 위치 업데이트: {iconOffset}");
+        }
+    }
+    
+    [ContextMenu("Update Order Bubble Position")]
+    public void UpdateOrderBubblePosition()
+    {
+        if (orderBubbleContainer != null)
+        {
+            orderBubbleContainer.transform.localPosition = orderBubbleOffset;
+            Debug.Log($"📋 주문 말풍선 위치 업데이트: {orderBubbleOffset}");
+        }
+    }
+    
+    [ContextMenu("Test Order Bubble")]
+    public void TestOrderBubble()
+    {
+        List<Customer.OrderItem> testOrder = new List<Customer.OrderItem>
+        {
+            new Customer.OrderItem(PreparationUI.FillingType.Sugar, 2),
+            new Customer.OrderItem(PreparationUI.FillingType.Seed, 1)
+        };
+        ShowOrderBubble(testOrder);
+    }
+    
+    [ContextMenu("Test UI Visibility")]
+    public void TestUIVisibility()
+    {
+        Debug.Log("=== UI 컨테이너 상태 확인 ===");
+        Debug.Log($"OrderBubbleContainer: {(orderBubbleContainer != null ? "존재" : "없음")}");
+        Debug.Log($"EmotionIconContainer: {(emotionIconContainer != null ? "존재" : "없음")}");
+        Debug.Log($"OrderBubble: {(orderBubble != null ? "존재" : "없음")}");
+        Debug.Log($"WorldCanvas: {(worldCanvas != null ? "존재" : "없음")}");
+        Debug.Log($"EnableUI: {enableUI}");
+        Debug.Log($"IsInitialized: {isInitialized}");
+        
+        if (orderBubbleContainer != null)
+        {
+            Debug.Log($"OrderBubbleContainer position: {orderBubbleContainer.transform.position}");
+            Debug.Log($"OrderBubbleContainer active: {orderBubbleContainer.activeInHierarchy}");
+        }
+        
+        if (emotionIconContainer != null)
+        {
+            Debug.Log($"EmotionIconContainer position: {emotionIconContainer.transform.position}");
+            Debug.Log($"EmotionIconContainer active: {emotionIconContainer.activeInHierarchy}");
+        }
+    }
+    
+    [ContextMenu("Force Refresh UI")]
+    public void ForceRefreshUI()
+    {
+        InitializeUI();
+        RefreshUIElementParents();
+        Debug.Log("UI 강제 새로고침 완료");
+    }
+    
+    [ContextMenu("Validate Setup")]
+    public void ValidateSetup()
+    {
+        Debug.Log("=== CustomerUI_Enhanced 설정 검증 ===");
+        
+        // 기본 UI 요소 확인
+        Debug.Log($"OrderBubble: {(orderBubble != null ? "✅ 할당됨" : "❌ 할당 필요")}");
+        Debug.Log($"OrderText: {(orderText != null ? "✅ 할당됨" : "❌ 할당 필요")}");
+        Debug.Log($"BubbleBackground: {(bubbleBackground != null ? "✅ 할당됨" : "❌ 할당 필요")}");
+        
+        // 감정 아이콘 확인
+        Debug.Log("--- 감정 아이콘 상태 ---");
+        string[] requiredIcons = {"happy", "angry", "satisfaction", "warning", "confused"};
+        
+        foreach (string iconKey in requiredIcons)
+        {
+            if (emotionIcons != null && emotionIcons.ContainsKey(iconKey))
+            {
+                GameObject icon = emotionIcons[iconKey];
+                Debug.Log($"{iconKey}: {(icon != null ? "✅ 할당됨" : "❌ 할당 필요")}");
+            }
+            else
+            {
+                Debug.Log($"{iconKey}: ❌ 키 없음");
+            }
+        }
+        
+        // 필수 설정 확인
+        Debug.Log("--- 필수 설정 확인 ---");
+        Debug.Log($"EnableUI: {enableUI}");
+        Debug.Log($"EnableAnimations: {enableAnimations}");
+        Debug.Log($"IconOffset: {iconOffset}");
+        Debug.Log($"OrderBubbleOffset: {orderBubbleOffset}");
+        Debug.Log($"OrderBubbleSize: {orderBubbleSize}");
+        
+        // 권장사항 출력
+        Debug.Log("=== 설정 권장사항 ===");
+        Debug.Log("1. Inspector에서 다음 항목들을 할당해주세요:");
+        Debug.Log("   - Order Bubble (주문 말풍선 GameObject)");
+        Debug.Log("   - Order Text (TextMeshPro 컴포넌트)");
+        Debug.Log("   - Bubble Background (Image 컴포넌트)");
+        Debug.Log("   - 각종 감정 아이콘 GameObjects");
+        Debug.Log("2. 아이콘 위치는 iconOffset으로 조정 가능합니다.");
+        Debug.Log("3. 말풍선 위치는 orderBubbleOffset으로 조정 가능합니다.");
+    }
+    
+    /// <summary>
+    /// 개별 위치 조정 함수들 (Inspector에서 실시간 조정 가능)
+    /// </summary>
+    public void SetEmotionIconPosition(Vector3 newPosition)
+    {
+        iconOffset = newPosition;
+        UpdateEmotionIconPosition();
+    }
+    
+    public void SetOrderBubblePosition(Vector3 newPosition)
+    {
+        orderBubbleOffset = newPosition;
+        UpdateOrderBubblePosition();
+    }
+    
+    public void SetOrderBubbleSize(Vector2 newSize)
+    {
+        orderBubbleSize = newSize;
+        if (orderBubble != null)
+        {
+            RectTransform bubbleRect = orderBubble.GetComponent<RectTransform>();
+            if (bubbleRect != null)
+            {
+                bubbleRect.sizeDelta = orderBubbleSize;
+            }
+        }
     }
 }

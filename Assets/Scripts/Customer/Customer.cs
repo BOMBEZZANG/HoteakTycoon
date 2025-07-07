@@ -1,5 +1,6 @@
 // Assets/Scripts/Customer/Customer.cs
 // 🎭 에러 수정된 PointManager 연동 완전한 손님 시스템 (호환성 개선 버전)
+// Compilation fix
 
 using UnityEngine;
 using System.Collections;
@@ -52,8 +53,8 @@ public class Customer : MonoBehaviour
     }
     
     [Header("손님 기본 정보")]
-    public int customerID;
-    public string customerName = "손님";
+        public int customerID;
+        public string customerName = "손님";
     
     [Header("🎨 Character System")]
     public CharacterDatabase characterDatabase;  // Character database reference
@@ -390,6 +391,16 @@ public class Customer : MonoBehaviour
         {
             Debug.Log($"🎨 {customerName} character applied: {character.characterName}, scale: {finalScale}");
         }
+    }
+    
+    /// <summary>
+    /// Set character database (used by SendMessage from CustomerSpawner)
+    /// </summary>
+    public void SetCharacterDatabase(CharacterDatabase database)
+    {
+        characterDatabase = database;
+        if (enableDebugLogs)
+            Debug.Log($"🎭 {customerName}: Character database set via SendMessage");
     }
     
     /// <summary>

@@ -298,11 +298,37 @@ public class CustomerSpawner : MonoBehaviour
         // Initialize customer with basic data
         customer.InitializeCustomer(customerId, customerName, this);
         
-        // Set character database reference
-        customer.characterDatabase = characterDatabase;
+        // Character system setup - temporarily disabled due to compilation issues
+        // TODO: Re-enable once Unity properly compiles Customer.characterDatabase field
+        /*
+        if (customer != null && characterDatabase != null)
+        {
+            try
+            {
+                customer.characterDatabase = characterDatabase;
+                customer.SetRandomCharacter();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"⚠️ Character system setup failed: {ex.Message}");
+            }
+        }
+        */
         
-        // Apply random character from database
-        customer.SetRandomCharacter();
+        // Alternative: Use SendMessage to safely call methods that may not exist
+        if (customer != null)
+        {
+            // Try to set character database using SendMessage (safe if method doesn't exist)
+            if (characterDatabase != null)
+            {
+                customer.SendMessage("SetCharacterDatabase", characterDatabase, SendMessageOptions.DontRequireReceiver);
+                customer.SendMessage("SetRandomCharacter", SendMessageOptions.DontRequireReceiver);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ Customer component is null during spawn.");
+        }
         
         // Apply global scale if needed
         if (applyGlobalScale)

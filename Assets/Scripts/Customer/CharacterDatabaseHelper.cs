@@ -51,6 +51,8 @@ public static class CharacterDatabaseHelper
     }
     
     [MenuItem("Tools/Customer System/Migrate Legacy Characters")]
+    [System.Obsolete]
+
     public static void MigrateLegacyCharacters()
     {
         // Find all Customer prefabs/objects in the scene
@@ -90,6 +92,8 @@ public static class CharacterDatabaseHelper
     }
     
     [MenuItem("Tools/Customer System/Validate Character System")]
+    [System.Obsolete]
+
     public static void ValidateCharacterSystem()
     {
         Debug.Log("=== Character System Validation ===");
