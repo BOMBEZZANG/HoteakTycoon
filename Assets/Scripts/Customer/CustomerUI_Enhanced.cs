@@ -17,10 +17,10 @@ public class CustomerUI_Enhanced : MonoBehaviour
     public GameObject orderBubbleContainer;     // 주문 말풍선 전용 컨테이너
     public GameObject emotionIconContainer;     // 감정 아이콘 전용 컨테이너              
     
-    [Header("📝 주문 표시")]
-    public GameObject orderBubble;              
-    public TextMeshProUGUI orderText;          
-    public Image bubbleBackground;              
+    [Header("📝 주문 표시 (프로그래밍 방식)")]
+    public GameObject orderTextPanel;              // 주문 텍스트 패널 (자동 생성)
+    public TextMeshProUGUI orderText;              // 주문 텍스트 (자동 생성)
+    public Image textBackground;                   // 텍스트 배경 (자동 생성)              
     
     [Header("⏳ 진행 상태")]
     public Slider waitProgressSlider;           
@@ -59,9 +59,9 @@ public class CustomerUI_Enhanced : MonoBehaviour
     public float bounceHeight = 0.3f;                      // 바운스 높이
     public float rotationSpeed = 90f;                      // 회전 속도
     
-    [Header("📋 주문 말풍선 설정")]
-    public Vector3 orderBubbleOffset = new Vector3(0, 1.8f, 0);  // 머리 위 오프셋
-    public Vector2 orderBubbleSize = new Vector2(180, 80);       // 말풍선 크기 (더 작게)
+    [Header("📋 주문 텍스트 설정")]
+    public Vector3 orderTextOffset = new Vector3(0, 2.0f, 0);   // 머리 위 오프셋
+    public Vector2 orderTextSize = new Vector2(3.0f, 1.0f);     // 텍스트 크기 (World Space 단위)
     
     [Header("⚡ 특수 이펙트")]
     public ParticleSystem angryParticles;       // 분노 파티클
@@ -87,7 +87,7 @@ public class CustomerUI_Enhanced : MonoBehaviour
     [Header("🎨 텍스트 스타일")]
     public Color orderTextColor = Color.black;             
     public Color completedTextColor = Color.green;         
-    public float orderTextSize = 14f;                      
+    public float orderFontSize = 12f;                      // 텍스트 폰트 크기                      
     
     [Header("🐛 디버그")]
     public bool enableUI = true;               
@@ -133,26 +133,160 @@ public class CustomerUI_Enhanced : MonoBehaviour
                 worldCanvas.transform.LookAt(Camera.main.transform);
                 worldCanvas.transform.Rotate(0, 180, 0);
             }
-            
+
             // 주문 말풍선 컨테이너 회전
             if (orderBubbleContainer != null)
             {
                 orderBubbleContainer.transform.LookAt(Camera.main.transform);
                 orderBubbleContainer.transform.Rotate(0, 180, 0);
             }
-            
+
             // 감정 아이콘 컨테이너 회전
             if (emotionIconContainer != null)
             {
                 emotionIconContainer.transform.LookAt(Camera.main.transform);
                 emotionIconContainer.transform.Rotate(0, 180, 0);
             }
+            // Position adjustment disabled - handled in ShowOrderBubble instead
+        // Text positioning is now managed when the order is first displayed
         }
     }
-    
+
     /// <summary>
     /// 🎭 감정 아이콘 시스템 설정
     /// </summary>
+    /// 
+    /// 
+/// <summary>
+/// 말풍선 표시 시 한 번만 위치 조정 (화면 경계 체크)
+/// </summary>
+void AdjustBubblePositionOnShow()
+{
+    if (orderBubbleContainer == null || Camera.main == null || orderTextPanel == null) return;
+
+    // 원래 오프셋 위치로 초기화
+    orderBubbleContainer.transform.localPosition = orderTextOffset;
+    
+    // 말풍선 컨테이너의 월드 좌표
+    Vector3 bubbleWorldPos = orderBubbleContainer.transform.position;
+    
+    // 월드 좌표를 화면 좌표로 변환
+    Vector3 screenPoint = Camera.main.WorldToScreenPoint(bubbleWorldPos);
+    
+    // 화면 범위 체크
+    if (screenPoint.z < 0) return; // 카메라 뒤에 있으면 무시
+    
+    // 화면 크기
+    float screenWidth = Screen.width;
+    float screenHeight = Screen.height;
+    
+    // 텍스트의 화면상 크기 추정 (새로운 스케일링 고려)
+    float bubbleScreenWidth = orderTextSize.x * 100 * 0.01f; // World Space를 화면 픽셀로 변환
+    float bubbleScreenHeight = orderTextSize.y * 100 * 0.01f;
+    
+    // 안전 마진
+    float marginX = 30f;
+    float marginY = 30f;
+    
+    // 위치 조정 계산
+    Vector3 adjustedOffset = orderTextOffset;
+    
+    // 좌측 경계 체크
+    if (screenPoint.x - bubbleScreenWidth / 2 < marginX)
+    {
+        // 좌측으로 밀려나면 오른쪽으로 이동
+        float adjustment = (marginX + bubbleScreenWidth / 2 - screenPoint.x) / 10f; // 새로운 스케일에 맞춰 조정
+        adjustedOffset.x += adjustment;
+    }
+    // 우측 경계 체크
+    else if (screenPoint.x + bubbleScreenWidth / 2 > screenWidth - marginX)
+    {
+        // 우측으로 밀려나면 왼쪽으로 이동
+        float adjustment = (screenPoint.x + bubbleScreenWidth / 2 - (screenWidth - marginX)) / 10f; // 새로운 스케일에 맞춰 조정
+        adjustedOffset.x -= adjustment;
+    }
+    
+    // 상단 경계 체크
+    if (screenPoint.y + bubbleScreenHeight / 2 > screenHeight - marginY)
+    {
+        // 상단으로 밀려나면 아래로 이동
+        float adjustment = (screenPoint.y + bubbleScreenHeight / 2 - (screenHeight - marginY)) / 10f; // 새로운 스케일에 맞춰 조정
+        adjustedOffset.y -= adjustment;
+    }
+    
+    // 조정된 위치 적용
+    orderBubbleContainer.transform.localPosition = adjustedOffset;
+    
+    Debug.Log($"📍 Text position adjusted: Original={orderTextOffset}, Adjusted={adjustedOffset}");
+}
+
+void AdjustBubblePosition()
+{
+    if (orderBubbleContainer == null || Camera.main == null || orderTextPanel == null) return;
+
+    // 말풍선 컨테이너의 월드 좌표 (원래 오프셋 위치 사용)
+    Vector3 originalWorldPos = transform.position + orderTextOffset;
+    
+    // 월드 좌표를 화면 좌표로 변환
+    Vector3 screenPoint = Camera.main.WorldToScreenPoint(originalWorldPos);
+    
+    // 화면 범위 체크 (0 이상, 화면 크기 이하)
+    if (screenPoint.z < 0) return; // 카메라 뒤에 있으면 무시
+    
+    // 화면 크기
+    float screenWidth = Screen.width;
+    float screenHeight = Screen.height;
+    
+    // 말풍선의 대략적인 화면상 크기 (간단한 추정)
+    float bubbleScreenWidth = 80f; // 더 보수적인 크기 추정
+    float bubbleScreenHeight = 40f;
+    
+    // 안전 마진
+    float marginX = 20f;
+    float marginY = 20f;
+    
+    // 경계 체크 및 조정
+    Vector3 adjustedWorldPos = originalWorldPos;
+    bool needsAdjustment = false;
+    
+    // 좌측 경계 체크
+    if (screenPoint.x - bubbleScreenWidth / 2 < marginX)
+    {
+        Vector3 targetScreen = new Vector3(marginX + bubbleScreenWidth / 2, screenPoint.y, screenPoint.z);
+        Vector3 targetWorld = Camera.main.ScreenToWorldPoint(targetScreen);
+        adjustedWorldPos.x = targetWorld.x;
+        needsAdjustment = true;
+    }
+    // 우측 경계 체크
+    else if (screenPoint.x + bubbleScreenWidth / 2 > screenWidth - marginX)
+    {
+        Vector3 targetScreen = new Vector3(screenWidth - marginX - bubbleScreenWidth / 2, screenPoint.y, screenPoint.z);
+        Vector3 targetWorld = Camera.main.ScreenToWorldPoint(targetScreen);
+        adjustedWorldPos.x = targetWorld.x;
+        needsAdjustment = true;
+    }
+    
+    // 상단 경계 체크
+    if (screenPoint.y + bubbleScreenHeight / 2 > screenHeight - marginY)
+    {
+        Vector3 targetScreen = new Vector3(screenPoint.x, screenHeight - marginY - bubbleScreenHeight / 2, screenPoint.z);
+        Vector3 targetWorld = Camera.main.ScreenToWorldPoint(targetScreen);
+        adjustedWorldPos.y = targetWorld.y;
+        needsAdjustment = true;
+    }
+    
+    // 위치 적용
+    if (needsAdjustment)
+    {
+        orderBubbleContainer.transform.position = adjustedWorldPos;
+    }
+    else
+    {
+        // 조정이 필요없으면 원래 오프셋 위치 유지
+        orderBubbleContainer.transform.localPosition = orderTextOffset;
+    }
+}
+
     void SetupEmotionIconSystem()
     {
         emotionIcons = new Dictionary<string, GameObject>
@@ -613,7 +747,7 @@ public class CustomerUI_Enhanced : MonoBehaviour
         if (orderText != null)
         {
             orderText.color = orderTextColor;
-            orderText.fontSize = orderTextSize;
+            orderText.fontSize = orderFontSize;
         }
         
         isInitialized = true;
@@ -652,30 +786,26 @@ public class CustomerUI_Enhanced : MonoBehaviour
     /// </summary>
     void CreateIndependentContainers()
     {
-        // 주문 말풍선 컨테이너 생성 (World Space Canvas)
+        // 주문 텍스트 컨테이너 생성 (World Space Canvas)
         if (orderBubbleContainer == null)
         {
-            orderBubbleContainer = new GameObject("OrderBubbleContainer");
+            orderBubbleContainer = new GameObject("OrderTextContainer");
             orderBubbleContainer.transform.SetParent(transform);
-            orderBubbleContainer.transform.localPosition = orderBubbleOffset;
+            orderBubbleContainer.transform.localPosition = orderTextOffset;
             
             // Canvas 컴포넌트 추가
-            Canvas bubbleCanvas = orderBubbleContainer.AddComponent<Canvas>();
-            bubbleCanvas.renderMode = RenderMode.WorldSpace;
-            bubbleCanvas.worldCamera = Camera.main;
-            
-            // CanvasScaler 추가
-            CanvasScaler bubbleScaler = orderBubbleContainer.AddComponent<CanvasScaler>();
-            bubbleScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            bubbleScaler.referenceResolution = new Vector2(1920, 1080);
+            Canvas textCanvas = orderBubbleContainer.AddComponent<Canvas>();
+            textCanvas.renderMode = RenderMode.WorldSpace;
+            textCanvas.worldCamera = Camera.main;
+            textCanvas.sortingOrder = 100; // 다른 UI보다 앞에 표시
             
             // RectTransform 설정
-            RectTransform bubbleRect = orderBubbleContainer.GetComponent<RectTransform>();
-            bubbleRect.sizeDelta = orderBubbleSize;
-            bubbleRect.localScale = Vector3.one * 0.01f; // World space scaling
+            RectTransform containerRect = orderBubbleContainer.GetComponent<RectTransform>();
+            containerRect.sizeDelta = new Vector2(100, 100); // 기본 컨테이너 크기
+            containerRect.localScale = Vector3.one * 0.01f; // World Space 스케일링
             
-            // GraphicRaycaster 추가 (UI 상호작용용)
-            orderBubbleContainer.AddComponent<GraphicRaycaster>();
+            // 간단한 텍스트 UI 생성
+            CreateSimpleOrderText();
         }
         
         // 감정 아이콘 컨테이너 생성 (World Space Canvas)
@@ -711,25 +841,58 @@ public class CustomerUI_Enhanced : MonoBehaviour
     }
     
     /// <summary>
+    /// 간단한 주문 텍스트 UI 생성 (텍스트만)
+    /// </summary>
+    void CreateSimpleOrderText()
+    {
+        if (orderBubbleContainer == null) 
+        {
+            Debug.LogError("❌ OrderTextContainer is null! Cannot create text UI.");
+            return;
+        }
+        
+        Debug.Log("📋 Creating simple order text UI...");
+        
+        // 텍스트만 생성 (패널 없이)
+        orderTextPanel = new GameObject("OrderText");
+        orderTextPanel.transform.SetParent(orderBubbleContainer.transform, false);
+        
+        // RectTransform 설정
+        RectTransform textRect = orderTextPanel.AddComponent<RectTransform>();
+        textRect.sizeDelta = new Vector2(orderTextSize.x * 100, orderTextSize.y * 100); // World Space를 UI 픽셀로 변환
+        textRect.anchoredPosition = Vector2.zero;
+        
+        // Unity Text 컴포넌트 사용 (간단하고 안정적)
+        UnityEngine.UI.Text textComponent = orderTextPanel.AddComponent<UnityEngine.UI.Text>();
+        textComponent.text = "주문 대기중...";
+        textComponent.fontSize = (int)orderFontSize;
+        textComponent.color = Color.white;
+        textComponent.alignment = TextAnchor.MiddleCenter;
+        textComponent.fontStyle = FontStyle.Bold;
+        textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        
+        // 초기에는 비활성화
+        orderTextPanel.SetActive(false);
+        
+        Debug.Log($"📋 간단한 주문 텍스트 UI 생성 완료! Size: {orderTextSize}");
+    }
+    
+    /// <summary>
+    /// 둥근 모서리 스프라이트 생성 (기본 UI 스프라이트 사용)
+    /// </summary>
+    Sprite CreateRoundedRectSprite()
+    {
+        // Unity 기본 UI 스프라이트 사용
+        return Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+    }
+    
+    /// <summary>
     /// 기존 UI 요소들을 적절한 컨테이너로 재배치
     /// </summary>
     void RefreshUIElementParents()
     {
-        // 주문 말풍선을 새 컨테이너로 이동
-        if (orderBubble != null && orderBubbleContainer != null)
-        {
-            orderBubble.transform.SetParent(orderBubbleContainer.transform, false);
-            orderBubble.transform.localPosition = Vector3.zero;
-            orderBubble.transform.localRotation = Quaternion.identity;
-            orderBubble.transform.localScale = Vector3.one;
-            
-            RectTransform bubbleRect = orderBubble.GetComponent<RectTransform>();
-            if (bubbleRect != null)
-            {
-                bubbleRect.anchoredPosition = Vector2.zero;
-                bubbleRect.sizeDelta = orderBubbleSize;
-            }
-        }
+        // 프로그래밍 방식으로 생성된 말풍선은 이미 적절한 위치에 있으므로 스킵
+        // 기존 Inspector에서 할당된 orderBubble이 있다면 무시 (새로운 방식 사용)
         
         // 모든 감정 아이콘들을 새 컨테이너로 이동 (null 체크 추가)
         if (emotionIconContainer != null && emotionIcons != null)
@@ -755,42 +918,47 @@ public class CustomerUI_Enhanced : MonoBehaviour
     
     public void ShowOrderBubble(List<Customer.OrderItem> orderItems)
     {
-        if (!enableUI || !isInitialized || orderItems == null || orderItems.Count == 0) return;
+        Debug.Log($"🔍 ShowOrderText called - enableUI: {enableUI}, isInitialized: {isInitialized}, orderItems count: {orderItems?.Count ?? 0}");
+        
+        if (!enableUI || !isInitialized || orderItems == null || orderItems.Count == 0) 
+        {
+            Debug.LogWarning("⚠️ ShowOrderText early return - conditions not met");
+            return;
+        }
         
         currentOrder = new List<Customer.OrderItem>(orderItems);
         string orderDisplayText = GenerateOrderDisplayText(orderItems);
         
-        Debug.Log($"📋 주문 말풍선 표시: {orderDisplayText}");
+        Debug.Log($"📋 주문 텍스트 표시: {orderDisplayText}");
+        Debug.Log($"🔍 orderTextPanel: {(orderTextPanel != null ? "Found" : "NULL")}");
+        Debug.Log($"🔍 orderBubbleContainer: {(orderBubbleContainer != null ? "Found" : "NULL")}");
         
-        if (orderText != null)
+        // 텍스트 내용 업데이트
+        if (orderTextPanel != null)
         {
-            orderText.text = orderDisplayText;
-            // 텍스트 크기 조정
-            orderText.fontSize = orderTextSize * 0.8f; // 더 작게
+            // Unity Text 컴포넌트 찾기 (orderTextPanel 자체가 텍스트 오브젝트)
+            UnityEngine.UI.Text textComponent = orderTextPanel.GetComponent<UnityEngine.UI.Text>();
+            if (textComponent != null)
+            {
+                textComponent.text = orderDisplayText;
+                Debug.Log($"✅ Order text updated: {orderDisplayText}");
+            }
+            else
+            {
+                Debug.LogError("❌ Text component not found in orderTextPanel!");
+            }
+            
+            Debug.Log($"🔍 Activating orderTextPanel at position: {orderTextPanel.transform.position}");
+            orderTextPanel.SetActive(true);
+            
+            // 간단한 페이드인 애니메이션
+            StartCoroutine(SimpleTextFadeIn(orderTextPanel));
+            
+            Debug.Log("✅ OrderTextPanel activated!");
         }
-        
-        if (orderBubble != null)
+        else
         {
-            orderBubble.SetActive(true);
-            
-            // 주문 말풍선 컨테이너가 있으면 해당 컨테이너에 부모 설정
-            if (orderBubbleContainer != null)
-            {
-                orderBubble.transform.SetParent(orderBubbleContainer.transform, false);
-                orderBubble.transform.localPosition = Vector3.zero;
-                orderBubble.transform.localRotation = Quaternion.identity;
-                orderBubble.transform.localScale = Vector3.one;
-            }
-            
-            // 말풍선 크기 조정
-            RectTransform bubbleRect = orderBubble.GetComponent<RectTransform>();
-            if (bubbleRect != null)
-            {
-                bubbleRect.sizeDelta = orderBubbleSize;
-                bubbleRect.anchoredPosition = Vector2.zero;
-            }
-            
-            StartCoroutine(BubblePopAnimation(orderBubble));
+            Debug.LogError("❌ orderTextPanel is NULL! Cannot show text.");
         }
         
         // 📝 주문 시 기쁨 아이콘 표시
@@ -866,9 +1034,9 @@ public class CustomerUI_Enhanced : MonoBehaviour
         
         ShowFeedbackText(message, Color.green);
         
-        if (orderBubble != null)
+        if (orderTextPanel != null)
         {
-            StartCoroutine(BubblePopAnimation(orderBubble));
+            StartCoroutine(SimpleTextFadeIn(orderTextPanel));
         }
         
         // 📝 부분 완료 시 만족 아이콘 표시
@@ -877,10 +1045,35 @@ public class CustomerUI_Enhanced : MonoBehaviour
     
     public void HideOrderBubble()
     {
-        if (orderBubble != null)
+        if (orderTextPanel != null)
         {
-            orderBubble.SetActive(false);
+            orderTextPanel.SetActive(false);
         }
+    }
+    
+    /// <summary>
+    /// 간단한 텍스트 페이드인 애니메이션
+    /// </summary>
+    IEnumerator SimpleTextFadeIn(GameObject textPanel)
+    {
+        CanvasGroup canvasGroup = textPanel.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+        {
+            canvasGroup = textPanel.AddComponent<CanvasGroup>();
+        }
+        
+        canvasGroup.alpha = 0f;
+        float fadeTime = 0.3f;
+        float elapsedTime = 0f;
+        
+        while (elapsedTime < fadeTime)
+        {
+            elapsedTime += Time.deltaTime;
+            canvasGroup.alpha = elapsedTime / fadeTime;
+            yield return null;
+        }
+        
+        canvasGroup.alpha = 1f;
     }
     
     public void UpdateWaitProgress(float progress)
@@ -951,9 +1144,9 @@ public class CustomerUI_Enhanced : MonoBehaviour
         ShowConfusion(); // 혼란 아이콘 표시
         ShowFeedbackText("이건 제가 주문한 게 아니에요! 😕", Color.green);
         
-        if (orderBubble != null)
+        if (orderTextPanel != null)
         {
-            StartCoroutine(ShakeAnimation(orderBubble, 0.5f));
+            StartCoroutine(SimpleTextFadeIn(orderTextPanel));
         }
     }
     
@@ -1123,8 +1316,8 @@ public class CustomerUI_Enhanced : MonoBehaviour
     {
         if (orderBubbleContainer != null)
         {
-            orderBubbleContainer.transform.localPosition = orderBubbleOffset;
-            Debug.Log($"📋 주문 말풍선 위치 업데이트: {orderBubbleOffset}");
+            orderBubbleContainer.transform.localPosition = orderTextOffset;
+            Debug.Log($"📋 주문 텍스트 위치 업데이트: {orderTextOffset}");
         }
     }
     
@@ -1145,7 +1338,7 @@ public class CustomerUI_Enhanced : MonoBehaviour
         Debug.Log("=== UI 컨테이너 상태 확인 ===");
         Debug.Log($"OrderBubbleContainer: {(orderBubbleContainer != null ? "존재" : "없음")}");
         Debug.Log($"EmotionIconContainer: {(emotionIconContainer != null ? "존재" : "없음")}");
-        Debug.Log($"OrderBubble: {(orderBubble != null ? "존재" : "없음")}");
+        Debug.Log($"OrderTextPanel: {(orderTextPanel != null ? "존재" : "없음")}");
         Debug.Log($"WorldCanvas: {(worldCanvas != null ? "존재" : "없음")}");
         Debug.Log($"EnableUI: {enableUI}");
         Debug.Log($"IsInitialized: {isInitialized}");
@@ -1177,9 +1370,7 @@ public class CustomerUI_Enhanced : MonoBehaviour
         Debug.Log("=== CustomerUI_Enhanced 설정 검증 ===");
         
         // 기본 UI 요소 확인
-        Debug.Log($"OrderBubble: {(orderBubble != null ? "✅ 할당됨" : "❌ 할당 필요")}");
-        Debug.Log($"OrderText: {(orderText != null ? "✅ 할당됨" : "❌ 할당 필요")}");
-        Debug.Log($"BubbleBackground: {(bubbleBackground != null ? "✅ 할당됨" : "❌ 할당 필요")}");
+        Debug.Log($"OrderTextPanel: {(orderTextPanel != null ? "✅ 자동 생성됨 (텍스트만)" : "❌ 생성 필요")}");
         
         // 감정 아이콘 확인
         Debug.Log("--- 감정 아이콘 상태 ---");
@@ -1203,18 +1394,17 @@ public class CustomerUI_Enhanced : MonoBehaviour
         Debug.Log($"EnableUI: {enableUI}");
         Debug.Log($"EnableAnimations: {enableAnimations}");
         Debug.Log($"IconOffset: {iconOffset}");
-        Debug.Log($"OrderBubbleOffset: {orderBubbleOffset}");
-        Debug.Log($"OrderBubbleSize: {orderBubbleSize}");
+        Debug.Log($"OrderTextOffset: {orderTextOffset}");
+        Debug.Log($"OrderTextSize: {orderTextSize}");
         
         // 권장사항 출력
         Debug.Log("=== 설정 권장사항 ===");
-        Debug.Log("1. Inspector에서 다음 항목들을 할당해주세요:");
-        Debug.Log("   - Order Bubble (주문 말풍선 GameObject)");
-        Debug.Log("   - Order Text (TextMeshPro 컴포넌트)");
-        Debug.Log("   - Bubble Background (Image 컴포넌트)");
-        Debug.Log("   - 각종 감정 아이콘 GameObjects");
+        Debug.Log("1. 새로운 시스템은 자동으로 텍스트 UI를 생성합니다:");
+        Debug.Log("   - Order Text (자동 생성, 배경 없음)");
+        Debug.Log("   - Unity Text 컴포넌트 (자동 생성)");
+        Debug.Log("   - 각종 감정 아이콘 GameObjects (수동 할당)");
         Debug.Log("2. 아이콘 위치는 iconOffset으로 조정 가능합니다.");
-        Debug.Log("3. 말풍선 위치는 orderBubbleOffset으로 조정 가능합니다.");
+        Debug.Log("3. 텍스트 위치는 orderTextOffset으로 조정 가능합니다.");
     }
     
     /// <summary>
@@ -1226,21 +1416,21 @@ public class CustomerUI_Enhanced : MonoBehaviour
         UpdateEmotionIconPosition();
     }
     
-    public void SetOrderBubblePosition(Vector3 newPosition)
+    public void SetOrderTextPosition(Vector3 newPosition)
     {
-        orderBubbleOffset = newPosition;
+        orderTextOffset = newPosition;
         UpdateOrderBubblePosition();
     }
     
-    public void SetOrderBubbleSize(Vector2 newSize)
+    public void SetOrderTextSize(Vector2 newSize)
     {
-        orderBubbleSize = newSize;
-        if (orderBubble != null)
+        orderTextSize = newSize;
+        if (orderTextPanel != null)
         {
-            RectTransform bubbleRect = orderBubble.GetComponent<RectTransform>();
-            if (bubbleRect != null)
+            RectTransform textRect = orderTextPanel.GetComponent<RectTransform>();
+            if (textRect != null)
             {
-                bubbleRect.sizeDelta = orderBubbleSize;
+                textRect.sizeDelta = new Vector2(orderTextSize.x * 100, orderTextSize.y * 100);
             }
         }
     }
