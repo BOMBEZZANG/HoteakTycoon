@@ -264,12 +264,12 @@ MonoBehaviour:
   confusedIcon: {fileID: 0}
   thinkingIcon: {fileID: 0}
   sleepyIcon: {fileID: 0}
-  iconOffset: {x: 0.8, y: 0.5, z: 0}
+  iconOffset: {x: 0, y: 0, z: 0}
   iconScale: 1
   pulseSpeed: 2
   bounceHeight: 0.3
   rotationSpeed: 90
-  orderTextOffset: {x: 0, y: 0.3, z: 0}
+  orderTextOffset: {x: 0, y: 0.35, z: 0}
   orderTextSize: {x: 3, y: 1}
   angryParticles: {fileID: 0}
   loveParticles: {fileID: 0}
