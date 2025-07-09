@@ -175,6 +175,11 @@ public class Customer : MonoBehaviour
     private bool wasAngry = false;
     private int wrongOrderAttempts = 0;
     
+    // 🔧 클릭 처리 중복 방지
+    private static bool isProcessingClick = false;
+    private static float lastClickTime = 0f;
+    private const float clickCooldown = 0.1f; // 0.1초 쿨다운
+    
     // 컴포넌트 참조
     private SpriteRenderer spriteRenderer;
     private AudioSource audioSource;
@@ -203,6 +208,7 @@ public class Customer : MonoBehaviour
     // 상호작용 시스템
     private bool isHighlighted = false;
     private Color originalColor;
+    private Coroutine currentHighlightCoroutine = null;
     
     void Awake()
     {
@@ -257,6 +263,18 @@ public class Customer : MonoBehaviour
             circleCollider.radius = clickRadius;
             circleCollider.isTrigger = true;
             customerCollider = circleCollider;
+        }
+        
+        // 콜라이더 설정 최적화
+        if (customerCollider != null)
+        {
+            customerCollider.isTrigger = true;
+            
+            // 콜라이더 반지름을 더 정밀하게 조정
+            if (customerCollider is CircleCollider2D circleCol)
+            {
+                circleCol.radius = Mathf.Min(clickRadius, 1.0f); // 최대 1.0f로 제한
+            }
         }
         
         // UI 컴포넌트 자동 연결 (선택적)
@@ -805,19 +823,112 @@ public class Customer : MonoBehaviour
             // 🔧 호떡 클릭과 충돌 방지: 거리 체크를 더 엄격하게
             if (distance <= clickRadius)
             {
-                // 🚨 추가 검증: 마우스가 실제로 이 손님 위에 있는지 확인
-                Collider2D hitCollider = Physics2D.OverlapPoint(mousePos);
-                if (hitCollider != null && hitCollider.gameObject == gameObject)
+                // 🚨 개선된 검증: 마우스 위치의 모든 콜라이더를 확인하여 손님 우선순위 적용
+                Collider2D[] hitColliders = Physics2D.OverlapPointAll(mousePos, interactionLayer);
+                bool customerFound = false;
+                bool hotteokInStackFound = false;
+                bool hotteokOnGriddleFound = false;
+                
+                // 먼저 호떡 오브젝트가 있는지 확인 (우선순위 높음)
+                foreach (Collider2D collider in hitColliders)
                 {
-                    Debug.Log($"🎯 손님 직접 클릭 감지: {customerName}");
-                    OnCustomerClicked();
+                    if (collider.GetComponent<HotteokOnGriddle>() != null)
+                    {
+                        hotteokOnGriddleFound = true;
+                        Debug.Log($"🥞 그리들 호떡 오브젝트 우선 감지로 손님 클릭 무시: {collider.gameObject.name}");
+                        break;
+                    }
+                    else if (collider.GetComponent<HotteokInStack>() != null)
+                    {
+                        hotteokInStackFound = true;
+                        Debug.Log($"🥞 스택 호떡 오브젝트 우선 감지로 손님 클릭 무시: {collider.gameObject.name}");
+                        break;
+                    }
+                }
+                
+                // 호떡이 감지되면 손님 클릭 처리하지 않음
+                if (hotteokOnGriddleFound || hotteokInStackFound)
+                {
+                    return;
+                }
+                
+                // 호떡이 없으면 손님 클릭 확인
+                foreach (Collider2D collider in hitColliders)
+                {
+                    if (collider.gameObject == gameObject)
+                    {
+                        customerFound = true;
+                        break;
+                    }
+                    // 추가 검증: Customer 컴포넌트가 있는 오브젝트인지 확인
+                    else if (collider.GetComponent<Customer>() != null && collider.GetComponent<Customer>() == this)
+                    {
+                        customerFound = true;
+                        break;
+                    }
+                }
+                
+                if (customerFound)
+                {
+                    // 🔧 추가 검증: 실제로 이 손님이 클릭되어야 하는지 확인
+                    if (customerCollider != null && customerCollider.enabled)
+                    {
+                        Debug.Log($"🎯 손님 직접 클릭 감지: {customerName}");
+                        OnCustomerClicked();
+                    }
+                    else
+                    {
+                        Debug.Log($"🚫 손님 클릭 무시: 콜라이더가 비활성화됨 ({customerName})");
+                    }
                 }
                 else
                 {
-                    Debug.Log($"🚫 손님 클릭 무시: 다른 오브젝트 클릭됨 ({hitCollider?.gameObject.name ?? "null"})");
+                    // 디버그: 어떤 오브젝트들이 감지되었는지 확인
+                    string detectedObjects = "";
+                    foreach (Collider2D collider in hitColliders)
+                    {
+                        detectedObjects += collider.gameObject.name + ", ";
+                    }
+                    Debug.Log($"🚫 손님 클릭 무시: 다른 오브젝트들 클릭됨 ({detectedObjects.TrimEnd(',', ' ')})");
                 }
             }
         }
+    }
+    
+    /// <summary>
+    /// OnMouseDown 백업 클릭 처리 (HandleInput이 실패할 경우 대비)
+    /// 🚨 임시로 비활성화하여 중복 클릭 방지 테스트
+    /// </summary>
+    void OnMouseDown()
+    {
+        // 🚨 임시로 OnMouseDown 비활성화 (HandleInput으로만 처리)
+        Debug.Log($"🚨 OnMouseDown 호출됨 (무시됨): {customerName}");
+        return;
+        
+        // 현재 대기 상태가 아니면 클릭 무시
+        if (currentState != CustomerState.Waiting && currentState != CustomerState.Warning) return;
+        
+        // 호떡 오브젝트가 있는지 확인 (OnMouseDown도 호떡 클릭 방지)
+        Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mousePos.z = 0f;
+        
+        Collider2D[] hitColliders = Physics2D.OverlapPointAll(mousePos, interactionLayer);
+        foreach (Collider2D collider in hitColliders)
+        {
+            if (collider.GetComponent<HotteokOnGriddle>() != null)
+            {
+                Debug.Log($"🥞 OnMouseDown: 그리들 호떡 오브젝트 감지로 손님 클릭 무시: {collider.gameObject.name}");
+                return;
+            }
+            else if (collider.GetComponent<HotteokInStack>() != null)
+            {
+                Debug.Log($"🥞 OnMouseDown: 스택 호떡 오브젝트 감지로 손님 클릭 무시: {collider.gameObject.name}");
+                return;
+            }
+        }
+        
+        Debug.Log($"🎯 OnMouseDown 백업 클릭 감지: {customerName}");
+        OnCustomerClicked();
     }
     
     /// <summary>
@@ -842,8 +953,18 @@ public class Customer : MonoBehaviour
     /// </summary>
     void OnCustomerClicked()
     {
-        // 클릭 효과
-        ShowClickEffect();
+        // 🔧 클릭 중복 처리 방지
+        if (isProcessingClick)
+        {
+            Debug.Log($"🚫 {customerName}: 다른 손님이 클릭 처리 중이므로 무시");
+            return;
+        }
+        
+        if (Time.time - lastClickTime < clickCooldown)
+        {
+            Debug.Log($"🚫 {customerName}: 클릭 쿨다운 중이므로 무시");
+            return;
+        }
         
         if (!CanReceiveOrder())
         {
@@ -868,6 +989,13 @@ public class Customer : MonoBehaviour
             return;
         }
         
+        // 🔧 모든 검증이 통과한 후에만 클릭 처리 시작
+        isProcessingClick = true;
+        lastClickTime = Time.time;
+        
+        // 🔧 검증 완료 후 클릭 효과 표시
+        ShowClickEffect();
+        
         PreparationUI.FillingType selectedType = hotteokScript.fillingType;
         
         // 🔧 배달 확인 로그 추가
@@ -882,6 +1010,9 @@ public class Customer : MonoBehaviour
         {
             ReceiveWrongOrder(selectedType);
         }
+        
+        // 클릭 처리 완료
+        isProcessingClick = false;
     }
     
     /// <summary>
@@ -1517,6 +1648,8 @@ public class Customer : MonoBehaviour
     /// </summary>
     void ShowClickEffect()
     {
+        Debug.Log($"🔵 {customerName}: ShowClickEffect() 호출됨");
+        
         if (clickEffect != null)
         {
             ShowVisualEffect(clickEffect);
@@ -1525,7 +1658,20 @@ public class Customer : MonoBehaviour
         // 하이라이트 효과
         if (enableClickHighlight && spriteRenderer != null)
         {
-            StartCoroutine(HighlightEffect());
+            Debug.Log($"🔵 {customerName}: 하이라이트 효과 시작");
+            
+            // 이미 진행 중인 하이라이트 효과가 있으면 중단
+            if (currentHighlightCoroutine != null)
+            {
+                StopCoroutine(currentHighlightCoroutine);
+                Debug.Log($"🔵 {customerName}: 이전 하이라이트 효과 중단");
+            }
+            
+            currentHighlightCoroutine = StartCoroutine(HighlightEffect());
+        }
+        else
+        {
+            Debug.Log($"🔵 {customerName}: 하이라이트 효과 건너뜀 (enableClickHighlight: {enableClickHighlight}, spriteRenderer: {spriteRenderer != null})");
         }
     }
     
@@ -1534,7 +1680,15 @@ public class Customer : MonoBehaviour
     /// </summary>
     IEnumerator HighlightEffect()
     {
+        if (spriteRenderer == null)
+        {
+            Debug.LogError($"❌ {customerName}: SpriteRenderer가 null입니다!");
+            yield break;
+        }
+        
         Color originalColor = spriteRenderer.color;
+        
+        Debug.Log($"🟡 {customerName}: 하이라이트 효과 시작 (원본 색상: {originalColor})");
         
         for (int i = 0; i < 3; i++)
         {
@@ -1543,6 +1697,9 @@ public class Customer : MonoBehaviour
             spriteRenderer.color = originalColor;
             yield return new WaitForSeconds(0.1f);
         }
+        
+        Debug.Log($"🟡 {customerName}: 하이라이트 효과 완료");
+        currentHighlightCoroutine = null;
     }
     
     /// <summary>
